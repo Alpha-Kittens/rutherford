@@ -11,6 +11,23 @@ def get_metadata(file):
     iteration = 1 if len(unprocessed) == 2 else int(re.search(digit, unprocessed[2]).group(0))
     return unprocessed[0], unprocessed[1], iteration
 
+def get_file_info(fp):
+    with open(fp) as file:
+        lines = file.readlines()
+    times = lines[9].split(' ')
+    time = int(times[0])
+    print(time)
+    counts = []
+    for i in range(12, 2060):
+        digit = r'\d+'
+
+        count = int(re.search(digit, lines[i]).group(0))
+
+        counts.append(count)
+
+    return time, counts
+
+
 def read_data(file):
     
     data = {}
