@@ -9,7 +9,7 @@ def get_metadata(file):
         return None
     unprocessed = name.split('_')
     iteration = 1 if len(unprocessed) == 2 else int(re.search(digit, unprocessed[2]).group(0))
-    return unprocessed[0], unprocessed[1], iteration
+    return unprocessed[0], int(unprocessed[1]), iteration
 
 def get_file_info(fp):
     with open(fp) as file:
