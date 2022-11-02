@@ -3,13 +3,22 @@ import os
 
 digit = r'\-?\d+'
 
+element_map = {
+    'gold' : 79,
+    'iron' : 26,
+    'titanium' : 22, 
+}
+
+def Z(element):
+    return element_map[element]
+
 def get_metadata(file):
     name, ext = file.split('/')[-1].split('.')
     if ext == "Chn":
         return None
     unprocessed = name.split('_')
     iteration = 1 if len(unprocessed) == 2 else int(re.search(digit, unprocessed[2]).group(0))
-    return unprocessed[0], int(unprocessed[1]), iteration
+    return str.lower(unprocessed[0]), int(unprocessed[1]), iteration
 
 def get_file_info(fp):
     with open(fp) as file:
