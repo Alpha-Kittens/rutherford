@@ -1,10 +1,10 @@
 import re
 import os
 
-digit = r'\d+'
+digit = r'\-?\d+'
 
 def get_metadata(file):
-    name, ext = file.split('.')
+    name, ext = file.split('/')[-1].split('.')
     if ext == "Chn":
         return None
     unprocessed = name.split('_')
@@ -53,3 +53,11 @@ def recursive_read(data, folder):
             add_data(data, entry)
         else:
             recursive_read(data, entry)
+
+def iterationless(data):
+    for key in data:
+        if (key[0], key[1]) not in data.keys():
+            data[(key[0], key[1])] = 0
+        data[(key[0], key[1])] = data[(key[0], key[1])][0] + data[key][0], data[(key[0], key[1])][1] + data[key][1], 
+
+        
