@@ -6,7 +6,7 @@ digit = r'\-?\d+'
 element_map = {
     'gold' : 79,
     'iron' : 26,
-    'titanium' : 22, 
+    'titanium' : 22,
 }
 
 def Z(element):
@@ -55,11 +55,19 @@ def add_data(data, file):
     entry = read_data(file)
     data[(entry['target'], entry['angle'], entry['iteration'])] = entry['time'], entry['histogram']
 
-def recursive_read(data, folder):
+def multiple_in(list, inlist):
+    success = True
+    for entry in list:
+        success = success and entry in inlist
+    return success
+
+def recursive_read(data, folder, require = [], reject = []):
     
     for entry in os.listdir(folder):
         if os.path.isfile(os.path.join(entry, folder)):
-            add_data(data, entry)
+            metadata = get_metadata(entry)
+            if multiple_in(require, metadata[0:-1]) and (reject == [] or not multiple_in(reject, metadata[0:-1])):
+                add_data(data, entry)
         else:
             recursive_read(data, entry)
 
@@ -67,6 +75,6 @@ def iterationless(data):
     for key in data:
         if (key[0], key[1]) not in data.keys():
             data[(key[0], key[1])] = 0
-        data[(key[0], key[1])] = data[(key[0], key[1])][0] + data[key][0], data[(key[0], key[1])][1] + data[key][1], 
+        data[(key[0], key[1])] = data[(key[0], key[1])][0] + data[key][0], data[(key[0], key[1])][1] + data[key][1]
 
         
