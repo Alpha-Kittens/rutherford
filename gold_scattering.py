@@ -1,9 +1,12 @@
 import os
 from data_loader import read_data
 import matplotlib.pyplot as plt
+import numpy as np
 import math
 
-folder = 'beam_profile/'
+
+
+folder = 'gold_scattering/'
 
 files = os.listdir(folder)
 
@@ -21,16 +24,19 @@ for file_name in files:
 
     error = math.sqrt(cps)/math.sqrt(time)
 
-    print(error)
-    
-    angles.append(angle)
-    cpss.append(cps)
-    errors.append(error)
+    if(angle >= 10):
+        angles.append(angle)
+        cpss.append(cps)
+        errors.append(error)
 
-plt.errorbar(angles, cpss, yerr = errors, xerr = 0.5, marker='o', ls='none')
+
+
+#plt.scatter(angles, cps, marker='o')
+plt.errorbar(angles, cpss, yerr = np.array(errors) ,xerr = 0.5, marker='o', ls = 'none')
 plt.xlabel('angle')
 plt.ylabel('cps')
-plt.title('beam profile :O')
-plt.xticks(range(-10,11, 2))
+#plt.yscale('log')
+plt.title('gold scattering :P')
 plt.show()
+
 
