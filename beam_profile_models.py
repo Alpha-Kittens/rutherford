@@ -6,8 +6,7 @@ import lmfit
 import numpy as np
 
 
-
-def left_beam_model(x, a, b, c, choice = 'linear'):
+def evaluate_beam_model(x, choice, params):
     if choice == 'exponential':
         return c * math.exp(a*(x-b))
     if choice == 'linear':
@@ -15,14 +14,60 @@ def left_beam_model(x, a, b, c, choice = 'linear'):
     if choice == 'quadratic':
         return a*(x**2) + b*x + c
 
-
-
-def beam_model(x, x_0 = 0, a=0.5, b=-4, c = 20, d=-20):
+def get_params(choice, side):
     '''
-    Test beam profiles
-    choice = exponential should could have initial values
+    returns a parameters objects for the given choice
+
+    Arguements:
+    `choice` : a string designating the model choice
+    `side` : integer, either 1 or -1. 1 means right side, -1 means left side (which side of the data these paramaters are for)
+    '''
+    params = lmfit.Parameters()
+    if choice == 'exponential':
+        params.add('a' + " " + str(side), value=-0.5*side)
+        params.add('b' + " " + str(side), value=4 * side)
+    if choice == 'linear':
+        params.add('a' + " " + str(side), value=-20*side)
     
-    '''
+    if(side == -1):
+        params.add('y_int' + " " + str(side), value=50)
+
+
+    return params
+
+def beam_model(x, choice_L, choice_R, **params):
+    choice = 'exponential' #model choice for the left side
+
+    left_params = lmfit.Parameters()
+    right_params = lmfit.Parameters()
+
+    for key in params:
+        if key != 'x_0':
+            if '-' not in key:
+                right_params.add(key, value=params[key])
+            else:
+                left_params.add(key, value=params[key])
+
+    x_0 = params['x_0']
+
+    h = left_beam_model(x_0, a, b, c, choice=choice) #height at the center
+
+
+    try:  
+        if x < x_0:
+            return evaluate_beam_model(x, choice=choice_L, params=left_params)
+        else:
+            return evaluate_beam_model(x, choice=choice_R, params=right_params)
+    except:
+        y_values = []
+        for i in range(0, len(x)):
+            y_values.append(beam_model(x[i], x_0, a, b, c, d))
+        return y_values
+
+
+
+'''
+def beam_model(x, x_0 = 0, a=0.5, b=-4, c = 20, d=-20):
     choice = 'exponential' #model choice for the left side
     h = left_beam_model(x_0, a, b, c, choice=choice) #height at the center
 
@@ -36,7 +81,7 @@ def beam_model(x, x_0 = 0, a=0.5, b=-4, c = 20, d=-20):
         for i in range(0, len(x)):
             y_values.append(beam_model(x[i], x_0, a, b, c, d))
         return y_values
-
+'''
 
 def beam_profile_fit(x, y, yerr):
     model = lmfit.Model(beam_model)
