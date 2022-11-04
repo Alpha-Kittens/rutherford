@@ -14,9 +14,11 @@ def Z(element):
 
 def get_metadata(file):
     name, ext = file.split('/')[-1].split('.')
-    if ext == "Chn":
+    if ext != "Spe":
         return None
     unprocessed = name.split('_')
+    if len(unprocessed) == 3 and unprocessed[2] == 'bad':
+        return None
     iteration = 1 if len(unprocessed) == 2 else int(re.search(digit, unprocessed[2]).group(0))
     return str.lower(unprocessed[0]), int(unprocessed[1]), iteration
 
@@ -25,7 +27,7 @@ def get_file_info(fp):
         lines = file.readlines()
     times = lines[9].split(' ')
     time = int(times[0])
-    print(time)
+    #print(time)
     counts = []
     for i in range(12, 2060):
         digit = r'\d+'
@@ -56,25 +58,47 @@ def add_data(data, file):
     data[(entry['target'], entry['angle'], entry['iteration'])] = entry['time'], entry['histogram']
 
 def multiple_in(list, inlist):
+    #print (list)
+    #print (inlist)
     success = True
     for entry in list:
         success = success and entry in inlist
+    #print (success)
     return success
 
 def recursive_read(data, folder, require = [], reject = []):
-    
+    #print (os.listdir(folder))
     for entry in os.listdir(folder):
-        if os.path.isfile(os.path.join(entry, folder)):
+        #print (path := str(folder) + "/" + str(entry))
+        path = str(folder) + "/" + str(entry)
+        if not os.path.isdir(path):
             metadata = get_metadata(entry)
-            if multiple_in(require, metadata[0:-1]) and (reject == [] or not multiple_in(reject, metadata[0:-1])):
-                add_data(data, entry)
+            #print (metadata)
+            if metadata is not None and multiple_in(require, metadata[0:-1]) and (reject == [] or not multiple_in(reject, metadata[0:-1])):
+                add_data(data, path)
         else:
-            recursive_read(data, entry)
+            #print (entry)
+            #print (folder)
+            recursive_read(data, path, require = require, reject = reject) # for some reason, os.path.join isn't doing what I expect
 
+import numpy as np
+
+def iterationless(data):
+    keys = list(data.keys())[:]
+    new_data = {}
+    for (foil, angle, iter) in keys:
+        if (foil, angle) not in data.keys():
+            new_data[(foil, angle)] = []
+        new_data[(foil, angle)].append(tuple(data[(foil, angle, iter)]))
+    return new_data
+        #print (data[(foil, angle)])
+    #print (data.keys())
+
+""" old version--decided cannot average between histograms
 def iterationless(data):
     for key in data:
         if (key[0], key[1]) not in data.keys():
             data[(key[0], key[1])] = 0
         data[(key[0], key[1])] = data[(key[0], key[1])][0] + data[key][0], data[(key[0], key[1])][1] + data[key][1]
-
+"""
         

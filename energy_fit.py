@@ -16,7 +16,7 @@ histogram = information['histogram']
 
 
 
-def max_model(histogram, plot = True, target = None, threshold = 1/2, give_weights = False):
+def max_model(histogram, plot = False, target = None, threshold = 1/2, give_weights = False):
 
     data = np.zeros(shape=(len(histogram), 2))
     weights = []
@@ -63,5 +63,5 @@ def max_model(histogram, plot = True, target = None, threshold = 1/2, give_weigh
         return w_max, w_err
 
 
-
-max_model(histogram, plot=True, target=information['target'])
+if __name__ == '__main__':
+    max_model(histogram, plot=True, target=information['target'])
