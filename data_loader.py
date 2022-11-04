@@ -66,7 +66,7 @@ def multiple_in(list, inlist):
     #print (success)
     return success
 
-def recursive_read(data, folder, require = [], reject = []):
+def recursive_read(data, folder, require = [], reject = [], condition = lambda x : True):
     #print (os.listdir(folder))
     for entry in os.listdir(folder):
         #print (path := str(folder) + "/" + str(entry))
@@ -74,7 +74,7 @@ def recursive_read(data, folder, require = [], reject = []):
         if not os.path.isdir(path):
             metadata = get_metadata(entry)
             #print (metadata)
-            if metadata is not None and multiple_in(require, metadata[0:-1]) and (reject == [] or not multiple_in(reject, metadata[0:-1])):
+            if metadata is not None and multiple_in(require, metadata[0:-1]) and (reject == [] or not multiple_in(reject, metadata[0:-1])) and condition(metadata):
                 add_data(data, path)
         else:
             #print (entry)

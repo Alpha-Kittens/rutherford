@@ -5,7 +5,6 @@ import numpy as np
 import math
 
 
-
 folder = 'gold_scattering/'
 
 files = os.listdir(folder)

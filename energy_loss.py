@@ -5,10 +5,11 @@ from energy_fit import max_model
 from data_processing import *
 
 
+#g/cm^3
 density_map = {
-    'gold' : None,
-    'iron' : None,
-    'titanium' : None,
+    'gold' : 19.32,
+    'iron' : 7.874,
+    'titanium' : 4.5,
 }
 number = {
     'gold' : 1,

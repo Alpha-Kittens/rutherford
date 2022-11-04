@@ -57,6 +57,19 @@ class Result:
 
     def __str__(self):
         return self.report()
+
+    def sin(self):
+        val = np.sin(self.val)
+        if self.stat == 0 and self.sys == 0:
+            tot = abs(np.cos(self.val) * self.tot)
+            return Result(val, tot = tot)
+        stat = abs(np.cos(self.val) * self.stat)
+        sys = abs(np.cos(self.val) * self.sys)
+        return Result(val, stat = stat, sys = sys)
+
+    def cos(self):
+        return (self*-1 + np.pi / 2).sin()
+        
     
     def __add__(self, other):
         try:
@@ -126,3 +139,15 @@ class Result:
     
     def __ge__(self, other):
         return not self < other
+
+    def __eq__(self, other):
+        try:
+            return self.val == other.val
+        except:
+            return self.val == other
+
+    def equals(self, other):
+        try:
+            return ((self <= other) and (self.val + self.tot > other.val - other.tot)) or ((self > other) and (self.val - self.tot < other.val + other.tot))
+        except:
+            return ((self <= other) and (self.val + self.tot > other)) or ((self > other) and (self.val - self.tot < other))
