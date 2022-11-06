@@ -24,10 +24,7 @@ for file_name in files:
     time = information['time']
 
     if cps != 0:
-        error = math.sqrt(cps)/math.sqrt(time)
-
-        print('angle ' + str(angle) + ": " + str(error))
-        
+        error = math.sqrt(cps)/math.sqrt(time)        
         angles.append(angle)
         cpss.append(cps)
         errors.append(error)
@@ -40,4 +37,9 @@ plt.xticks(range(-10,11, 2))
 plt.show()
 
 
-beam_profile_fit(angles, cpss, errors)
+# Use approximations from linear fit to determine true y errors
+for i in range(len(errors)):
+    errors[i] = math.sqrt((errors[i])**2 + (0.5 * 30)**2) # slope is about 30 and the x error is 0.5
+
+
+beam_profile_fit(angles, cpss, errors, choiceL = 'linear', choiceR= 'linear')
