@@ -7,12 +7,15 @@ element_map = {
     'gold' : 79,
     'iron' : 26,
     'titanium' : 22,
+    '2gold' : 79,
+    '3gold' : 79,
 }
 
 def Z(element):
     return element_map[element]
 
 def get_metadata(file):
+    print (file)
     name, ext = file.split('/')[-1].split('.')
     if ext != "Spe":
         return None
@@ -55,7 +58,10 @@ def read_data(file):
 def add_data(data, file):
 
     entry = read_data(file)
-    data[(entry['target'], entry['angle'], entry['iteration'])] = entry['time'], entry['histogram']
+    key = (entry['target'], entry['angle'], entry['iteration'])
+    if key in data.keys():
+        key = (entry['target'], entry['angle'], entry['iteration'] + 1)
+    data[key] = entry['time'], entry['histogram']
 
 def multiple_in(list, inlist):
     #print (list)
@@ -72,10 +78,11 @@ def recursive_read(data, folder, require = [], reject = [], condition = lambda x
         #print (path := str(folder) + "/" + str(entry))
         path = str(folder) + "/" + str(entry)
         if not os.path.isdir(path):
-            metadata = get_metadata(entry)
-            #print (metadata)
-            if metadata is not None and multiple_in(require, metadata[0:-1]) and (reject == [] or not multiple_in(reject, metadata[0:-1])) and condition(metadata):
-                add_data(data, path)
+            if "unknown" not in entry and "sus" not in entry: 
+                metadata = get_metadata(entry)
+                #print (metadata)
+                if metadata is not None and multiple_in(require, metadata[0:-1]) and (reject == [] or not multiple_in(reject, metadata[0:-1])) and condition(metadata):
+                    add_data(data, path)
         else:
             #print (entry)
             #print (folder)
