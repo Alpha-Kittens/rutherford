@@ -42,4 +42,4 @@ for i in range(len(errors)):
     errors[i] = math.sqrt((errors[i])**2 + (0.5 * 30)**2) # slope is about 30 and the x error is 0.5
 
 
-beam_profile_fit(angles, cpss, errors, choiceL = 'linear', choiceR= 'linear')
+beam_profile_fit(angles, cpss, errors, choiceL = 'exponential', choiceR= 'quadratic')
