@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import math
 from energy_loss import element_map
+import lmfit
 
 
 def scattering_unpack(cps, angle, entry, angle_err = 0.5):
@@ -46,13 +47,24 @@ def do_scattering_thing(element, min_angle, folder, emoji = ":P"):
     plt.title(element + " scattering " + emoji)
     plt.show()
 
+    bpdomain = np.linspace(-10, 10, )
     angles = np.linspace(min_angle, 180, 1000)
+    f = lambda theta : 1/(np.sin(theta / 2))**4
+    bp = #beam profile here
     
-    
-    x = np.array(angle)
+    scattering, pdomain = interpolate(convolve(bp, bpdomain, f, angles))
+
+    model = lambda x, c : c * scattering(x)
+    result = lmfit.fit()
+
+    """
+    #plot that boi
+    #x = np.array(bounds[0], bounds[1])
     Z = element_map(element)
     E = "skadoosh" #todo
-    y = np.array(cps) * (E / Z) **2
+    y = np.array(cps) * (E) **2
+    """
+    
 
 
 
