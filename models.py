@@ -2,12 +2,29 @@ import numpy as np
 import math
 
 def const_cross_section(c, theta):
+    # as yet unused
     return c / (np.sin(theta))**4
     
 def cross_section(Z, E, theta, Z_alpha = 2, e = 1):
+    # as yet unused
     return (Z * Z_alpha * e**2 / 4*E)**2 / (np.sin(theta))**4
 
 def convolve(f, fdomain, g, gdomain):
+    """
+    Executes a convolution of two functions on given domains. 
+    **Ensure the spacing of points in the domains are identical**
+    The domain of valid convolution might be shorter than you expect. Consider extrapolating out the longer of the two arrays 
+        to expand the domain of the convolution. 
+    Phil sent us a notebook that may have a better version of this? Will check later. 
+    Arguments:
+        * `f` (function: float->float): First function for convolution
+        * `fdomain` (np array of floats): Domain of first function. 
+        * `g` (function: float->float): Second function for convolution
+        * `gdomain` (np array of floats): Domain of second function.
+    Returns:
+        * `c` (np array of floats): Evaluation of convolution on convolution domain
+        * `cdomain` (np array of floats): Domain of convolution function. 
+    """
     # everything needs to be sorted
     # works better if the shorter of fdomain and gdomain is of odd length, I think?
     M, N = (gdomain, fdomain) if len(fdomain) > len(gdomain) else (fdomain, gdomain)
@@ -16,18 +33,37 @@ def convolve(f, fdomain, g, gdomain):
     return np.convolve(f(fdomain), g(gdomain))[len(M):len(N)+1], 1/2 * (N[a:-b] + N[b:-a])
 
 def interpolate(info):
+    """
+    Given the output of `convolve` above, returns a function that approximates the convolved function. 
+    Valid only on convolution domain. 
+    Presently unused.
+    Arguments:
+        `info` (2-tuple): same as output of `convolve`. i.e., evaluation of function and corresponding domain.
+    Returns:
+        `pfunc` (function: float -> float): Function which uses linear interpolation to approximate convolution.
+        Compatible with np arrays. 
+    """
     p, pdomain = info
     #p, pdomain are np array
     def pfunc(x):
-        eval = []
-        for xi in x:
-            if xi >= max(pdomain) or xi <= min(pdomain):
-                print ("can only interpolate between valid convolution bounds:  must have x >", min(pdomain), "| x <", max(pdomain))
+        try:
+            eval = []
+            for xi in x:
+                if xi >= max(pdomain) or xi <= min(pdomain):
+                    print ("can only interpolate between valid convolution bounds: must have x >", min(pdomain), "| x <", max(pdomain))
+                    raise ValueError
+                lows = pdomain <= xi
+                highs = pdomain >= xi
+                u = (xi - pdomain[lows][-1])/(pdomain[highs][0] - pdomain[lows][-1]) # between 0 and 1. 0 if at xlow, 1 if at xhigh
+                eval.append(p[lows][-1] * (1 - u) + p[highs][0] * (u))
+        except:
+            if x >= max(pdomain) or x <= min(pdomain):
+                print ("can only interpolate between valid convolution bounds: must have x >", min(pdomain), "| x <", max(pdomain))
                 raise ValueError
             lows = pdomain <= x
             highs = pdomain >= x
             u = (x - pdomain[lows][-1])/(pdomain[highs][0] - pdomain[lows][-1]) # between 0 and 1. 0 if at xlow, 1 if at xhigh
-            eval.append(p[lows][-1] * (1 - u) + p[highs][0] * (u))
+            eval = p[lows][-1] * (1 - u) + p[highs][0] * (u)
         return eval
     return pfunc, pdomain
         

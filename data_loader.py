@@ -15,7 +15,7 @@ def Z(element):
     return element_map[element]
 
 def get_metadata(file):
-    print (file)
+    #print (file)
     name, ext = file.split('/')[-1].split('.')
     if ext != "Spe":
         return None
@@ -26,6 +26,9 @@ def get_metadata(file):
     return str.lower(unprocessed[0]), int(unprocessed[1]), iteration
 
 def get_file_info(fp):
+    """
+    Given file path pointing to a .Spe file, returns total time and and a histogram of channel counts as a 2-tuple.
+    """
     with open(fp) as file:
         lines = file.readlines()
     times = lines[9].split(' ')
@@ -43,7 +46,16 @@ def get_file_info(fp):
 
 
 def read_data(file):
-    
+    """
+    Given a file path poitning to a .Spe file, returns a dictionary `data` with relevant informaiton.
+    Keys:
+        * `target`: foil in use. `empty`, `gold`, `2gold`, or `iron`. 
+        * `angle`: angle of detector
+        * `iteration`: iteration number. 
+        * `time`: total time of scan, truncated to seconds. 
+        * `counts`: histogram of channel data
+        * `cps`: counts per second
+    """
     data = {}
     metadata = get_metadata(file)
     if metadata is None:
@@ -56,7 +68,16 @@ def read_data(file):
     return data
 
 def add_data(data, file):
-
+    """
+    Adds data associated with a file to a dictionary.
+    Arguments:
+        * `data`: Dictionary where info is stored
+        * `file`: File path pointing to a .Spe file
+    Returns:
+        * Nothing. Rather, adds data to dictionary as follows:
+            -Key: metadata of `file`. i.e., foil, angle, iteration. 
+            -Value: `time`, `histogram` in file. 
+    """
     entry = read_data(file)
     key = (entry['target'], entry['angle'], entry['iteration'])
     if key in data.keys():
@@ -64,18 +85,29 @@ def add_data(data, file):
     data[key] = entry['time'], entry['histogram']
 
 def multiple_in(list, inlist):
-    #print (list)
-    #print (inlist)
+    """
+    Returns `True` if if all values of `list` (first argument) are present in `inlist` (second argument), `False` otherwise. 
+    """
     success = True
     for entry in list:
         success = success and entry in inlist
-    #print (success)
     return success
 
 def recursive_read(data, folder, require = [], reject = [], condition = lambda x : True):
-    #print (os.listdir(folder))
+    """
+    Reads all entries in a given folder into `data` dictionary. Can specify metadata details to require or reject, as well as more specific inclusion conditions. 
+    Arguments:
+        * `data` (dict): dictionary to which data entries will be added. Keys and values will be same as specified in `add_data`.  
+        * `folder` (string): file path of folder to read through
+        * `require` (array): Any entries in here must be present in metadata of a file for the file to be read into the dictionary. Default: []
+        * `reject` (array): If any entries in here are present in metadata of file, file will not be read into the dictionary. Default: []
+        * `condition` (function): If specified, `condition(metadata)` must evaluate to `True` in order for file to be read into dictionary. Default: always True
+    Returns:
+        * Nothing. Rather, adds data to dictionary as follows:
+            -Keys: metadata of all files read into dictionary. i.e., foil, angle, iteration. 
+            -Values: `time`, `histogram` associated with file.    
+    """
     for entry in os.listdir(folder):
-        #print (path := str(folder) + "/" + str(entry))
         path = str(folder) + "/" + str(entry)
         if not os.path.isdir(path):
             if "unknown" not in entry and "sus" not in entry: 
@@ -91,6 +123,10 @@ def recursive_read(data, folder, require = [], reject = [], condition = lambda x
 import numpy as np
 
 def iterationless(data):
+    """
+    Given `data` dict as returned by `add_data` and `recursive_read`, returns new dictionary where all 
+    values which have the same `foil` and `angle` metadata are combined into an array under new key `(foil, angle)`. 
+    """
     keys = list(data.keys())[:]
     new_data = {}
     for (foil, angle, iter) in keys:

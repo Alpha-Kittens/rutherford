@@ -241,6 +241,11 @@ def plot_fit(x, y, yerr, result, choiceL, choiceR):
     plt.legend()
     plt.show()
 
+def unpack_params(raw_params):
+    params = {}
+    for name, param in raw_params.items():
+        params[name] = param.value
+    return params
 
 def beam_profile_fit(x, y, yerr, choiceL, choiceR):
     '''
@@ -272,5 +277,8 @@ def beam_profile_fit(x, y, yerr, choiceL, choiceR):
 
     fit_report(result, choiceL, choiceR)
     plot_fit(x, y, yerr, result, choiceL, choiceR)
+
+    return lambda x : the_beam_model(choiceL, choiceR)(x, **unpack_params(result.params))
+
 
     
