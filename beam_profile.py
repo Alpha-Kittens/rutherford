@@ -5,6 +5,8 @@ import math
 import lmfit
 import numpy as np
 from beam_profile_models import beam_profile_fit
+plt.style.use('seaborn-colorblind')
+
 
 folder = 'beam_profile/'
 
@@ -29,7 +31,7 @@ for file_name in files:
         cpss.append(cps)
         errors.append(error)
 
-plt.errorbar(angles, cpss, yerr = errors, xerr = 0.5, marker='o', ls='none')
+plt.errorbar(angles, cpss, yerr = np.array(errors)*50, xerr = 0.5, marker='o', ls='none')
 plt.xlabel('angle')
 plt.ylabel('cps')
 plt.title('beam profile :O')
@@ -37,9 +39,13 @@ plt.xticks(range(-10,11, 2))
 plt.show()
 
 
-# Use approximations from linear fit to determine true y errors
+# Approximate y errors from x errors with slope from linear fit. For points outside of +/- 5, the slope is 0
+'''
 for i in range(len(errors)):
-    errors[i] = math.sqrt((errors[i])**2 + (0.5 * 30)**2) # slope is about 30 and the x error is 0.5
+    if abs(angles[i]) < 5:
+        errors[i] = math.sqrt((errors[i])**2 + (0.5 * 30)**2) # slope is about 30 and the x error is 0.5
+'''
 
 
-beam_profile_fit(angles, cpss, errors, choiceL = 'exponential', choiceR= 'quadratic')
+
+beam_profile_fit(angles, cpss, errors, choiceL = 'linear', choiceR= 'linear')
