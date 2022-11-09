@@ -74,9 +74,6 @@ choiceR = 'linear'
 result = beam_profile_fit(angles, cpss, errors, choiceL = choiceL, choiceR= choiceR, plot=True)
 
 
-
-
-
 def cwrite(file, params, choiceL, choiceR):
     with open(file, 'w') as f:
         print ("now writing")
