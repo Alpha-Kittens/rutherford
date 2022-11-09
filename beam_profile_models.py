@@ -144,18 +144,20 @@ def evaluate_beam_model(x, choice_L, choice_R, params):
             return 0
 
 
-def beam_model(x, choice_L, choice_R, **params):
+def use_beam_model(x, choice_L, choice_R, params):
     '''
-    the actual beam model, implements evaluate_beam_model
+    a usable version of the beam model, instead of **params, it takes a parameters object
 
     Arguments: 
         * `x` (float or list of floats) :  the point at which to evaluate the model or a list of points
         * `choice_L` (string) : choice for left side function
         * `choice_R` (string) : choice for right side function
-        * `params` (floats) : the neccesary parameters for this model
+        * `params` (Parameters) : the neccesary parameters for this model
 
     Returns: 
         * (float or list of floats) the result of evaluating the beam profile model
+    '''
+
     '''
     try: 
         return evaluate_beam_model(x, choice_L, choice_R, params)
@@ -164,6 +166,22 @@ def beam_model(x, choice_L, choice_R, **params):
         for i in range(0, len(x)):
             y_values.append(evaluate_beam_model(x[i], choice_L, choice_R, params))
         return y_values
+    '''
+
+    try: 
+        return evaluate_beam_model(x, choice_L, choice_R, params)
+    except:
+        y_values = []
+        for i in range(0, len(x)):
+            y_values.append(evaluate_beam_model(x[i], choice_L, choice_R, params))
+        return y_values
+
+
+def beam_model(x, choice_L, choice_R, **params):
+    '''
+    the actual beam model, uses use_beam_model
+    '''
+    return use_beam_model(x, choice_L, choice_R, params)
 
 
 #The actual beam model for selected choices
@@ -295,3 +313,5 @@ def profile_sys_error(angles, cpss, errors, angle_error, choiceL = 'linear', cho
     result_R = beam_profile_fit(right_angles, cpss, errors, choiceL = 'linear', choiceR= 'linear', plot=True)
 
     return result_L.params, result_R.params
+
+

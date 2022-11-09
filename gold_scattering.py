@@ -3,7 +3,7 @@ from data_loader import read_data
 import matplotlib.pyplot as plt
 import numpy as np
 import math
-from gold_scattering_new import scattering
+from scattering_helpers import scattering
 
 
 folder = 'gold_scattering/'

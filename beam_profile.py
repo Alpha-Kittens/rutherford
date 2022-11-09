@@ -87,7 +87,8 @@ def cwrite(file, params, choiceL, choiceR):
         for key in params:
             f.write('params.add( \'' + str(key) + '\', ' + 'value=' + str(params[key]) + ') \n')
         f.write("def profile (x): \n")
-        f.write('\t' + 'return evaluate_beam_model(x, \'' + str(choiceL) + '\', \'' + str(choiceR) + '\', ' + 'params)')
+        #f.write('\t' + 'return evaluate_beam_model(x, \'' + str(choiceL) + '\', \'' + str(choiceR) + '\', ' + 'params)')
+        f.write('\t' + 'return use_beam_model(x, \'' + str(choiceL) + '\', \'' + str(choiceR) + '\', ' + 'params)')
         f.flush()
 
 

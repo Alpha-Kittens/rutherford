@@ -1,6 +1,5 @@
 import os
 from data_loader import read_data, recursive_read
-from beam_profile import get_fit
 from data_processing import *
 from models import *
 import matplotlib.pyplot as plt
@@ -8,6 +7,7 @@ import numpy as np
 import math
 from energy_loss import element_map
 from beam_profile_models import beam_profile_fit
+from profile import profile
 import lmfit
 
 
@@ -116,16 +116,15 @@ def scattering(element, min_angle, folder, emoji = ":P"):
     bpdomain = np.arange(-10, 10, stepsize)
     angles = np.arange(min_angle, 180, stepsize) # note: to make convolution work properly, recommend we do the cutoff thing for the function `f` below 
                                              # and then change `angles` to np.arange(min_angle - 20, 180, stepsize)
-    f = lambda theta : 1/(np.sin(theta / 2 * np.pi / 180))**4
-    bp = get_fit()
-    
-    scattering, pdomain = convolve(bp, bpdomain, f, angles)
+    f = lambda theta : 1/(np.sin(theta / 2 * np.pi / 180))**4    
+
+    scattering,pdomain = convolve(profile, bpdomain, f, angles)
 
     #print (pdomain)
     #print (scattering)
 
     plt.plot(pdomain, scattering, label = "convolution", color = 'purple')
-    plt.plot(bpdomain, bp(bpdomain), label = "beam profile", color = "blue")
+    plt.plot(bpdomain, profile(bpdomain), label = "beam profile", color = "blue")
     plt.plot(angles, f(angles), label = "scattering expectation", color = "red")
     plt.legend()
     plt.xlabel("Angle (degrees)")
