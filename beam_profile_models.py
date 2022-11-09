@@ -277,12 +277,7 @@ def beam_profile_fit(x, y, yerr, choiceL, choiceR, plot=False):
 
     fit_report(result, choiceL, choiceR)
 
-<<<<<<< Updated upstream
-    return lambda x : the_beam_model(choiceL, choiceR)(x, **unpack_params(result.params))
-
-
     
-=======
     if plot:
         plot_fit(x, y, yerr, result, choiceL, choiceR)
 
@@ -300,4 +295,3 @@ def profile_sys_error(angles, cpss, errors, angle_error, choiceL = 'linear', cho
     result_R = beam_profile_fit(right_angles, cpss, errors, choiceL = 'linear', choiceR= 'linear', plot=True)
 
     return result_L.params, result_R.params
->>>>>>> Stashed changes

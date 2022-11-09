@@ -3,6 +3,7 @@ from data_loader import read_data
 import matplotlib.pyplot as plt
 import numpy as np
 import math
+from gold_scattering_new import scattering
 
 
 folder = 'gold_scattering/'
@@ -39,3 +40,4 @@ plt.title('gold scattering :P')
 plt.show()
 
 
+scattering('gold', 10, folder, emoji = ":P")
