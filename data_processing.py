@@ -13,10 +13,11 @@ def weighted_average(stuff):
         weights = 1/np.array([result.tot for result in stuff]) ** 2
         #print (vals)
         #print (weights)
+        return np.dot(vals, weights) / np.sum(weights), 1/np.sqrt(np.sum(weights))
     except:
         vals = [tup[0] for tup in stuff]
         weights = 1/np.array([tup[1] for tup in stuff]) ** 2
-    return np.dot(vals, weights) / np.sum(weights), 1/np.sqrt(np.sum(weights))
+        return np.dot(vals, weights) / np.sum(weights), 1/np.sqrt(np.sum(weights))
 
 def sum(*args):
     sum = 0
@@ -75,7 +76,7 @@ class Result:
         try:
             val = self.val + other.val
             stat = np.sqrt(self.stat**2 + other.stat**2)
-            sys = np.sqrt(self.sys**2 + other.stat**2)  
+            sys = np.sqrt(self.sys**2 + other.sys**2)  
         except:
             val = self.val + other
             stat = self.stat
@@ -151,3 +152,80 @@ class Result:
             return ((self <= other) and (self.val + self.tot > other.val - other.tot)) or ((self > other) and (self.val - self.tot < other.val + other.tot))
         except:
             return ((self <= other) and (self.val + self.tot > other)) or ((self > other) and (self.val - self.tot < other))
+
+def attempts(options):
+    if len(options) == 0:
+        return [[]]
+    else:
+        ret = []
+        prior = attempts(options[1:])
+        if type(options[0]) != type("hello"):
+            for option in options[0]:
+                for attempt in prior:
+                    ret.append([option] + attempt)
+        else:
+            for attempt in prior:
+                ret.append([options[0]] + attempt)
+        return ret
+
+class AsymmetricResult(Result):
+    def __init__(self, val, stathigh = 0, statlow = 0, syshigh = 0, syslow = 0):
+        super().__init__(val, stat = max(stathigh, statlow), sys = max(syshigh, syslow))
+        self.stathigh = stathigh
+        self.statlow = statlow
+        self.syshigh = syshigh
+        self.syslow = syslow
+
+    def report(self):
+        string = str(self.val)
+        if self.stathigh != 0 or self.statlow != 0:
+            if self.stathigh == self.statlow and self.stathigh != 0:
+                string += " ± " + str(self.stat) + " (stat)"
+            else:
+                string += " +" + str(self.stathigh) + "/-" + str(self.statlow) + " (stat)"
+            
+        if self.syshigh != 0 or self.syslow != 0:
+            if self.syshigh == self.syslow and self.syshigh != 0:
+                string += " ± " + str(self.sys) + " (sys)"
+            else:
+                string += " + " + str(self.syshigh) + ", - " + str(self.syslow) + " (sys)"
+
+        return string
+
+    @staticmethod
+    def asymmetric_evaluate(function, *args):
+        highstat = 0
+        lowstat = 0
+        highsys = 0
+        lowsys = 0
+        stats = []
+        syss = []
+        eval_args = []
+        for arg in args:
+            try:
+                stats.append((arg.val + arg.stat, arg.val - arg.stat))
+                syss.append((arg.val + arg.sys, arg.val - arg.sys))
+                eval_args.append(arg.val)
+            except:
+                stats.append((arg))
+                syss.append((arg))
+                eval_args.append(arg)
+        val = function(*eval_args)
+        stat_attempts = attempts(stats)
+        sys_attempts = attempts(syss)
+        for stat_attempt in stat_attempts:
+            eval = function(*stat_attempt)
+            if eval > val + highstat:
+                highstat = abs(eval - val)
+            if eval < val - lowstat:
+                lowstat = abs(eval - val)
+        for sys_attempt in sys_attempts:
+            eval = function(*sys_attempt)
+            if eval - val > val + highsys:
+                highsys = abs(eval - val)
+            if eval < val - lowsys:
+                lowsys = abs(eval - val)
+
+        return AsymmetricResult(val, stathigh = highstat, statlow = lowstat, syshigh = lowsys)
+
+
