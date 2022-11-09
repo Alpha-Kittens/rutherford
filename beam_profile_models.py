@@ -247,7 +247,7 @@ def unpack_params(raw_params):
         params[name] = param.value
     return params
 
-def beam_profile_fit(x, y, yerr, choiceL, choiceR):
+def beam_profile_fit(x, y, yerr, choiceL, choiceR, plot=False):
     '''
     implements lmfit.fit for the selected model to fit the beam profile data to a function
 
@@ -276,9 +276,28 @@ def beam_profile_fit(x, y, yerr, choiceL, choiceR):
     result = model.fit(y, x=np.array(x), params = params, weights=weights)
 
     fit_report(result, choiceL, choiceR)
-    plot_fit(x, y, yerr, result, choiceL, choiceR)
 
+<<<<<<< Updated upstream
     return lambda x : the_beam_model(choiceL, choiceR)(x, **unpack_params(result.params))
 
 
     
+=======
+    if plot:
+        plot_fit(x, y, yerr, result, choiceL, choiceR)
+
+    return result
+
+    
+def profile_sys_error(angles, cpss, errors, angle_error, choiceL = 'linear', choiceR= 'linear'):
+    left_angles = angles
+    right_angles = angles
+    for i in range(len(angles)):
+        left_angles[i] -= angle_error
+        right_angles[i] += angle_error
+        
+    result_L = beam_profile_fit(left_angles, cpss, errors, choiceL = 'linear', choiceR= 'linear', plot=True)
+    result_R = beam_profile_fit(right_angles, cpss, errors, choiceL = 'linear', choiceR= 'linear', plot=True)
+
+    return result_L.params, result_R.params
+>>>>>>> Stashed changes
