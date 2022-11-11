@@ -84,6 +84,11 @@ def add_data(data, file):
         key = (entry['target'], entry['angle'], entry['iteration'] + 1)
     data[key] = entry['time'], entry['histogram']
 
+def any_in(list, inlist):
+    for entry in list:
+        if entry in inlist:
+            return True
+    return False
 def multiple_in(list, inlist):
     """
     Returns `True` if if all values of `list` (first argument) are present in `inlist` (second argument), `False` otherwise. 
@@ -113,7 +118,7 @@ def recursive_read(data, folder, require = [], reject = [], condition = lambda x
             if "unknown" not in entry and "sus" not in entry: 
                 metadata = get_metadata(entry)
                 #print (metadata)
-                if metadata is not None and multiple_in(require, metadata[0:-1]) and (reject == [] or not multiple_in(reject, metadata[0:-1])) and condition(metadata):
+                if metadata is not None and multiple_in(require, metadata[0:-1]) and (reject == [] or not any_in(reject, metadata[0:-1])) and condition(metadata):
                     add_data(data, path)
         else:
             #print (entry)
