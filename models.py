@@ -32,7 +32,7 @@ def convolve(f, fdomain, g, gdomain):
     b = math.ceil((len(M)-1) / 2)
     return np.convolve(f(fdomain), g(gdomain))[len(M):len(N)+1], 1/2 * (N[a:-b] + N[b:-a])
 
-def interpolate(info):
+def interpolate(p, pdomain):
     """
     Given the output of `convolve` above, returns a function that approximates the convolved function. 
     Valid only on convolution domain. 
@@ -43,13 +43,14 @@ def interpolate(info):
         `pfunc` (function: float -> float): Function which uses linear interpolation to approximate convolution.
         Compatible with np arrays. 
     """
-    p, pdomain = info
+    #p, pdomain = info
     #p, pdomain are np array
     def pfunc(x):
         try:
             eval = []
             for xi in x:
                 if xi >= max(pdomain) or xi <= min(pdomain):
+                    print(xi)
                     print ("can only interpolate between valid convolution bounds: must have x >", min(pdomain), "| x <", max(pdomain))
                     raise ValueError
                 lows = pdomain <= xi

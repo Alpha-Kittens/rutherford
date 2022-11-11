@@ -1,0 +1,185 @@
+import os
+from data_loader import read_data
+import matplotlib.pyplot as plt
+import math
+import lmfit
+import numpy as np
+from beam_profile_models import beam_profile_fit
+from beam_profile_models import profile_sys_error
+from plots import plot_histogram
+from profile import profile
+plt.style.use('seaborn-colorblind')
+
+
+folder = 'beam_profile/'
+files = os.listdir(folder)
+
+view_data = False
+
+angles = []
+cpss = []
+errors = []
+counts = []
+omitted_data = []
+
+for file_name in files:
+    fp = folder + file_name
+
+    information = read_data(fp)
+    
+    cps = information['cps']
+    count = information['counts']
+    angle = information['angle']
+    time = information['time']
+    histogram = information['histogram']
+
+    if view_data == True:
+        plot_histogram(['empty', angle], histogram)
+
+    
+    if cps > 0.5:
+        error = math.sqrt(cps)/math.sqrt(time)
+        angles.append(angle)
+        cpss.append(cps)
+        errors.append(error)
+        counts.append(count)
+    else:
+        omitted_data.append(information)
+    
+
+def plot_profile_data(x = angles, y = cpss, yerr = errors, xerr = 0.5, emoji=':O', show=False):
+    plt.errorbar(x, y, yerr = yerr, xerr = xerr, marker='o', ls='none')
+    plt.xlabel('angle')
+    plt.ylabel('counts')
+    plt.title('beam profile ' + emoji)
+    plt.xticks(range(-10,11, 2))
+    if show:
+        plt.show()
+
+
+def plot_frac_uncertainties(emoji=':O'):
+    frac_unc = []
+    for i in range(len(errors)):
+        frac_unc.append(errors[i]/cpss[i])
+
+    plt.errorbar(angles, np.array(frac_unc), marker='o', ls='none')
+    plt.xlabel('angle')
+    plt.ylabel('fractional uncertainy')
+    plt.title('beam profile - uncertainties :O')
+    plt.xticks(range(-10,11, 2))
+    plt.show()
+
+
+
+def write_profile_to_file(file, params, choiceL, choiceR):
+    with open(file, 'w') as f:
+        print ("now writing")
+        f.write("from beam_profile_models import *\n")
+        f.write("from numpy import sqrt, abs\n")
+        f.write('import lmfit \n')
+        f.write("params = lmfit.Parameters() \n")
+        for key in params:
+            f.write('params.add( \'' + str(key) + '\', ' + 'value=' + str(params[key]) + ') \n')
+        f.write("def profile (x): \n")
+        #f.write('\t' + 'return evaluate_beam_model(x, \'' + str(choiceL) + '\', \'' + str(choiceR) + '\', ' + 'params)')
+        f.write('\t' + 'return use_beam_model(x, \'' + str(choiceL) + '\', \'' + str(choiceR) + '\', ' + 'params)')
+        f.flush()
+
+
+def view_omitted_data():
+    for entry in omitted_data:
+        cps = entry['cps']
+        angle = entry['angle']
+        histogram = entry['histogram']
+        plot_histogram(['empty', angle], histogram)
+
+
+def get_data():
+    return angles, cpss, errors
+
+
+def triangle_model(x, aL = 30, aR = -30, x0 = 0, y0 = 150):
+    a_L = aL
+    a_R = aR
+    x_0 = x0
+    y_0 = y0
+
+    try:
+        if x < x0:
+            y  = aL *(x-x0) + y0
+        else:
+            y = aR * (x-x0) + y0
+        
+        if y > 0:
+            return y
+        else:
+            return 0
+    except:
+        y = []
+        for i in x:
+            y.append(triangle_model(i, aL = a_L, aR = a_R, x0 = x_0, y0 = y_0))
+        return y
+
+def triangle_fit(x, y, report=False, show=False, initial_plot = False):
+    
+    model = lmfit.Model(triangle_model)
+
+    result = model.fit(y, x=x)
+    
+    if report:
+        plt.scatter(x, y, label='data')
+        params = result.params
+        init_params = result.init_params
+
+        x_vals=np.linspace(min(x), max(x), 1000)
+        y_eval=[]
+
+        for i in x_vals:
+            y_eval.append(triangle_model(i, params['aL'].value, params['aR'].value, params['x0'].value, params['y0'].value))
+        plt.plot(x_vals, y_eval, label='fit')
+
+
+        if initial_plot:
+            initial_y= []
+            for i in x_vals:
+                initial_y.append(triangle_model(i, init_params['aL'].value, init_params['aR'].value, init_params['x0'].value, init_params['y0'].value))
+            plt.plot(x_vals, initial_y, label = 'initial guess')
+
+
+        if show:
+            plt.legend()
+            plt.show()
+            print(lmfit.fit_report(result))
+    return lambda x : triangle_model(x, params['aL'].value, params['aR'].value, params['x0'].value, params['y0'].value)
+
+
+def generate_data_sets(total = 10, view=True):
+    data_sets = []
+    for i in range(total):
+        new_angles = []
+        # Sample the angle from a gaussian distribution
+        for angle in angles:
+            new_angle = np.random.normal(loc=angle, scale=0.5)
+            new_angles.append(new_angle)
+        
+        data_sets.append(new_angles)
+    
+    if view:
+        for data_set in data_sets:
+                plot_profile_data(data_set, cpss, yerr=0, xerr=0)
+        plt.show()
+
+    return data_sets
+
+def fit_data_sets(data_sets, show = False):
+    fits = []
+    for data_set in data_sets:
+        if show:
+            fit = triangle_fit(data_set, cpss, report=True, show=False)
+        else:
+            fit = triangle_fit(data_set, cpss, report=False, show=False)
+        fits.append(fit)
+    if show:
+        plt.show()
+
+    return fits
