@@ -193,7 +193,7 @@ def get_rutherford_convolutions(profile_sets, min_angle = 10, plot=False):
 
 
     if plot:
-        plt.plot(pdomain, f(pdomain), label = "scattering expectation", color = "red")
+        plt.plot(pdomain, (1e-5)*f(pdomain), label = "scattering expectation", color = "red")
         plt.legend()
         plt.show()
 
@@ -201,7 +201,7 @@ def get_rutherford_convolutions(profile_sets, min_angle = 10, plot=False):
     return convolutions, domains
 
 
-def get_scattering_data(element, min_angle, folder, plot=True, emoji = ":P"):
+def get_scattering_data(element, min_angle, folder, plot=True, emoji = ":P", show=True):
     '''
     gets the scattering data from a selected folder, and a given element
     '''
@@ -224,7 +224,8 @@ def get_scattering_data(element, min_angle, folder, plot=True, emoji = ":P"):
         plt.xlabel("Angle (degrees)")
         plt.ylabel("CPS")
         plt.title(element + " scattering " + emoji)
-        plt.show()
+        if show:
+            plt.show()
     return angle, cps, angle_err, cps_err
 
 
@@ -273,7 +274,7 @@ def fit_to_scattering(element, min_angle, folder, model, plot=True):
     print('b: ' +  str(result.params['b'].value))
     print('red chi: ' + str(result.redchi))
     
-
+    '''
     if plot:
         print('plotting now')
         plt.scatter(angle, cps, label='data')
@@ -293,7 +294,10 @@ def fit_to_scattering(element, min_angle, folder, model, plot=True):
         plt.plot(x_vals, initial_y, label = 'initial guess')
         plt.legend()
         plt.show()
-    
+    '''
+    if plot:
+        plot_fit(result, model, element, min_angle, folder, show=True)
+
     return result
 
 def rutherford_fits(element, min_angle, folder, convolutions, domains, plot=True):
@@ -315,3 +319,63 @@ def rutherford_fits(element, min_angle, folder, convolutions, domains, plot=True
     plt.hist(chi2)
     #plt.plot(chi2)
     plt.show()
+
+
+def plot_fit(result, model, element, min_angle, folder, show=True, label=None):
+    angle, cps, angle_err, cps_err = get_scattering_data(element, min_angle, folder, plot=False)
+
+    #plt.scatter(angle, cps, label='data')
+    params = result.params
+    init_params = result.init_params
+    x_vals=np.linspace(min(angle), max(angle), 1000)
+    y_eval=[]
+    for i in x_vals:
+        #y_eval.append(model(i, params['a'].value, params['b'].value))
+        y_eval.append(model(i, params['a'].value, params['b'].value))
+    if label is not None:
+        plt.plot(x_vals, y_eval, label='fit ' + label)
+    else:
+        plt.plot(x_vals, y_eval, label='fit')
+
+
+    initial_y= []
+    for i in x_vals:
+        #initial_y.append(model(i, init_params['a'].value, params['b'].value))
+        initial_y.append(model(i, init_params['a'].value, params['b'].value))
+    if label is not None:
+        plt.plot(x_vals, initial_y, label = 'initial guess ' + label)
+    else:
+        plt.plot(x_vals, initial_y, label = 'initial guess')
+    if show:
+        plt.legend()
+        plt.show()
+
+
+
+def compare_models_plot(element, min_angle, folder, rutherford_convolution, domain):
+    angle, cps, angle_err, cps_err = get_scattering_data(element, min_angle, folder, plot=True, show=False)
+
+
+    function, domain = interpolate(rutherford_convolution, domain)
+    print(':P')
+    model = lambda x, a=(1e-10), b=0 : a * np.array(function(x)) + b
+    result = fit_to_scattering(element, min_angle, folder, model, plot=False)
+    plot_fit(result, model, element, min_angle, folder, show=False, label='beam profile x rutherford')
+
+
+    themodel = lmfit.Model(scattering_model)
+    weights = []
+    for i in cps_err:
+        weights.append(1/i)
+    result2  = themodel.fit(cps, x=angle, weights=weights)
+
+    plot_fit(result2, scattering_model, element, min_angle, folder, show=False, label='rutherford scattering')
+
+    plt.legend()
+    plt.show()
+
+
+
+    
+    # Plot the rutherford model
+

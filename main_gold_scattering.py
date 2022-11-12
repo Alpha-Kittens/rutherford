@@ -17,7 +17,7 @@ plt.style.use('seaborn-colorblind')
 BEAM PROFILE
 '''
 ###
-view_omitted_data()
+#view_omitted_data()
 plot_profile_data(show=True)
 plot_frac_uncertainties()
 
@@ -48,8 +48,7 @@ for model in rutherford_models:
     plt.plot(x_vals, y_vals, label = "convolution " )
 plt.show()
 '''
-
-
-
-
+get_scattering_data('gold', min_angle=10, folder = 'gold_scattering/', plot=True)
 rutherford_fits('gold', min_angle=10, folder = 'gold_scattering/', convolutions=convolutions, domains=domains)
+
+compare_models_plot('gold', min_angle=10, folder = 'gold_scattering/', rutherford_convolution=convolutions[0], domain=domains[0])
