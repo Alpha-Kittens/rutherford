@@ -47,6 +47,37 @@ W_max = lambda b : (2*m_e*b**2*g(b)**2) / (1+2*g(b)*m_e/m_a + (m_e/m_a)**2)
 dEdx = lambda beta, foil : K * 2**2 * element_map[foil] / mass_map[foil] / beta**2 * (1/2 * math.log(2*m_e*beta**2*g(beta)**2*W_max(beta)/I[foil]**2) - beta**2) * density_map[foil]
 b = lambda E : math.sqrt(1 - m_a**2 / E**2)
 
+def coeffs(c1):
+    c = [c1]
+    while len(c) < len(c1):
+        c.append(c[-1][:-1] * c1[len(c):])
+    return [0] + [np.sum(ci) for ci in c]
+
+def get_coeffs(energies):
+    E = np.array(energies)
+    E2 = 1/E**2
+    return coeffs(E2)
+
+p_tot = lambda energies, N, p : N * np.polyval(get_coeffs(energies), p)
+
+def thiccness_dx(foil, incident, exiting):
+    E = incident + m_a
+    x = 0
+    dt = 1e-14
+    dx = dt/2 * v(beta) * 100
+    Es = [incident]
+    xs = [x]
+    while E > exiting + m_a:
+        beta = b(E)
+        x += dx # cm
+        #E -= dEdx(beta, foil) * v(beta) * dt
+        dE = dEdx(beta, foil) * dx
+        E -= dE
+        Es.append(E - m_a)
+        xs.append(x)
+    return xs, Es  
+    
+
 def thiccness(foil, incident, exiting):
     #WATCH UNITS OF X - cm
     E = incident + m_a
@@ -63,7 +94,6 @@ def thiccness(foil, incident, exiting):
 
     return x
 
-
 def get_energies(foil):
     data = {}
     recursive_read(data, "data", require = [0], reject = ["titanium"], condition = lambda metadata : metadata[0] == 'empty' or metadata[0] == foil)
@@ -77,6 +107,10 @@ def get_energies(foil):
     incident = e(ref_ch)
     exiting = e(foil_ch)
     return incident, exiting
+
+def p_scatter(empty_data, foil_data):
+    pass
+
 
 def get_thickness(foil, do_report = False):
     incident, exiting = get_energies(foil)

@@ -11,5 +11,3 @@ def plot_histogram(metadata, histogram, vlines = []):
         plt.axvline(x, color = color, label = label, ls = '--')
     plt.legend()
     plt.show()
-
-    

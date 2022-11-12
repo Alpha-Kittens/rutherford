@@ -101,6 +101,8 @@ class Result:
 
     def __truediv__(self, other):
         try:
+            #print (self)
+            #print (other)
             val = self.val / other.val
             stat = val * np.sqrt((self.stat/self.val)**2 + (other.stat/other.val)**2)
             sys = val * np.sqrt((self.sys/self.val)**2 + (other.sys/other.val)**2)
@@ -194,6 +196,17 @@ class AsymmetricResult(Result):
 
     @staticmethod
     def asymmetric_evaluate(function, *args):
+        """
+        Given a function and arguments, some of which are Result objects, finds error bounds on the evaluation of the function.
+        Assumes that critical points of function are on boundary of uncertainty region; reasonable for well-behaved functions and smallish relative errors?
+        Arguments:
+            * `function`: Function to be evaluated
+            * `*args`: Arguments to be passed to `function`, in order. At least one should be a `Result`. Otherwise, what are you even doing lol
+        Returns:
+            * `result`: AsymmetricResult object. Value is evaluation of `function` at `*args`; error bounds are calculated by testing `funciton` on error bounds of `Results` in `*args`.
+        NOTE: AsymmetricResult is a subclass of Result, and can be treated as one. AsymmetricResults store the upper and lower stat/sys errors separately; the corresponding
+            `Result` object uses the max(lower stat/sys error, upper stat/sys error) as its error for its stat/sys uncertainty. 
+        """
         highstat = 0
         lowstat = 0
         highsys = 0
