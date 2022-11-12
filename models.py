@@ -38,7 +38,8 @@ def interpolate(p, pdomain):
     Valid only on convolution domain. 
     Presently unused.
     Arguments:
-        `info` (2-tuple): same as output of `convolve`. i.e., evaluation of function and corresponding domain.
+        `p` (function): same as output of `convolve`. i.e., evaluation of function 
+        `pdomain` corresponding domain.
     Returns:
         `pfunc` (function: float -> float): Function which uses linear interpolation to approximate convolution.
         Compatible with np arrays. 
