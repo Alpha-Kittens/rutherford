@@ -157,6 +157,10 @@ if __name__ == '__main__':
 
 
 def convolve_with_rutherford(profile, min_angle = 10):
+    '''
+    implements the convolve method in models to convolve a beam profile with the rutherford model
+    returns the resulting array (not a callable), the domain in which it is valid, and the angles 
+    '''
     stepsize = 0.01
     bpdomain = np.arange(-10, 10, stepsize)
     angles = np.arange(min_angle, 180, stepsize) # note: to make convolution work properly, recommend we do the cutoff thing for the function `f` below 
@@ -169,6 +173,9 @@ def convolve_with_rutherford(profile, min_angle = 10):
 
 
 def get_rutherford_convolutions(profile_sets, min_angle = 10, plot=False):
+    '''
+    given a bunch of profile sets, implements convolve_with_rutherford for each one and returns a list of the results
+    '''
     convolutions = []
     domains = []
     stepsize = 0.01
@@ -195,6 +202,9 @@ def get_rutherford_convolutions(profile_sets, min_angle = 10, plot=False):
 
 
 def get_scattering_data(element, min_angle, folder, plot=True, emoji = ":P"):
+    '''
+    gets the scattering data from a selected folder, and a given element
+    '''
     data = {}
     recursive_read(data, folder, require = [element], condition = lambda metadata : metadata[1] > min_angle)
 
@@ -219,6 +229,10 @@ def get_scattering_data(element, min_angle, folder, plot=True, emoji = ":P"):
 
 
 def get_rutherford_models(rutherford_convolutions, domains, plot=False):
+    '''
+    implements interpolate from models to convert rutherford_convolutions into callable functions
+    plotting might kill your computer :( lol
+    '''
     models = []
     for i in range(len(rutherford_convolutions)):
         convolution = rutherford_convolutions[i]
@@ -240,6 +254,9 @@ def get_rutherford_models(rutherford_convolutions, domains, plot=False):
 
 
 def fit_to_scattering(element, min_angle, folder, model, plot=True):
+    ''''
+    fits a model to scattering data
+    '''
     angle, cps, angle_err, cps_err = get_scattering_data(element, min_angle, folder, plot=False)
 
     #themodel = lmfit.Model(model)
@@ -280,6 +297,10 @@ def fit_to_scattering(element, min_angle, folder, model, plot=True):
     return result
 
 def rutherford_fits(element, min_angle, folder, convolutions, domains, plot=True):
+    '''
+    given a bunch of convolutions (i tried to do where its given models but it seemed to not work)
+    it fits all of them and plots the chi2 distribution for them
+    '''
     chi2 = []
     for i in range(len(convolutions)):
         conv = convolutions[i]

@@ -17,6 +17,7 @@ plt.style.use('seaborn-colorblind')
 BEAM PROFILE
 '''
 ###
+view_omitted_data()
 plot_profile_data(show=True)
 plot_frac_uncertainties()
 
