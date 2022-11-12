@@ -48,7 +48,21 @@ number = {
     'iron' : 1,
     'titanium' : 1,
     '2gold' : 2,
+    '4gold' : 4,
+}
+b_est = {
+    'gold' : 3,
+    'iron' : 2,
+    #'titanium' : 1,
+    '2gold' : 3,
     '4gold' : 3,
+}
+consts = { # jackson + mccarthy with chi squred is 2. 
+    'gold' : (0.477, 0.1385),
+    '2gold' : (0.477, 0.1385),
+    '4gold' : (0.477, 0.1385),
+    'iron' : (0.477, 0.1385),
+    
 }
 
 e_empty = Result((5.486 * 0.86 + 5.443 * 0.127 + 5.391 * 0.014) / (0.86 + 0.127 + 0.014))
@@ -56,23 +70,36 @@ c = 299792458 # m/s
 m_a = 3.7273794066e3 #MeV
 m_e = 0.51099895000 #MeV
 K = 0.307075 # MeV / mol * cm^2
+a_fs = 1/137
 
 ### DEFINITIONS ###
 v = lambda b : b * c
 g = lambda b : 1 / math.sqrt(1-b**2)
 W_max = lambda b : (2*m_e*b**2*g(b)**2) / (1+2*g(b)*m_e/m_a + (m_e/m_a)**2)
-dEdx = lambda beta, foil : K * 2**2 * Z_map[foil] / mass_map[foil] / beta**2 * (1/2 * math.log(2*m_e*beta**2*g(beta)**2*W_max(beta)/I[foil]**2) - beta**2) * density_map[foil]
+dEdx = lambda beta, foil, c_a, c_b : K * 2**2 * Z_map[foil] / mass_map[foil] / beta**2 * loss(beta, foil, c_a, c_b) * density_map[foil]
+dEdx_simple = lambda beta, foil : K * 2**2 * Z_map[foil] / mass_map[foil] / beta**2 * L_a(beta, foil) * density_map[foil]
+loss = lambda beta, foil, c_a, c_b : L_a(beta, foil) - C_Z(beta, foil, c_a, c_b) + 2*L1(beta, foil) + 2**2 * L2(beta)
+L_a = lambda beta, foil : (1/2 * math.log(2*m_e*beta**2*g(beta)**2*W_max(beta)/I[foil]**2) - beta**2)
+x = lambda beta, foil : beta**2/(a_fs**2 * Z_map[foil])
+#C_Z = lambda beta, foil : 2*(Z_map[foil]**0.4 / (2*x(beta, foil)) + (b_est[foil] + 2) / x(beta, foil)**2 * Z_map[foil])
+C_Z = lambda beta, foil, c_a, c_b : c_a * math.log(x(beta, foil)) + c_b
+V = lambda beta, foil : beta*c / math.sqrt(Z_map[foil]* a_fs * c)
+L1 = lambda beta, foil : L_a(beta, foil) / V(beta, foil)**2 * (consts[foil][0] - consts[foil][1] * math.log(V(beta, foil) + 2)) / math.sqrt(Z_map[foil])
+y = lambda beta : 2 * a_fs / beta
+L2 = lambda beta : -y(beta)**2 * np.dot([1/(l+1) for l in range(100)], [1/((l+1)**2 + y(beta)**2) for l in range(100)])
 b = lambda E : math.sqrt(1 - m_a**2 / E**2)
 
 ### EXTRA HELPERS ###
 
 
 ### INTEGRATION ###
-def thiccness_dx(foil, incident, exiting):
+"""
+def thiccness_dx(foil, incident, exiting, dx = None):
     E = incident + m_a
     x = 0
     dt = 1e-14
-    dx = dt/2 * v(b(E)) * 100
+    if dx is None:
+        dx = dt/2 * v(b(E)) * 100
     Es = [incident]
     xs = [x]
     while E > exiting + m_a:
@@ -84,17 +111,91 @@ def thiccness_dx(foil, incident, exiting):
         Es.append(E - m_a)
         xs.append(x)
     return xs, Es  
+"""
+from models import interpolate
+def thiccness_dx(foil, incident, exiting, c_a, c_b):
+    E = incident + m_a
+    x = 0
+    dt = 2e-16
+    Es = [incident]
+    xs = [x]
+    dEs = [dEdx_simple(b(E), foil) * v(b(E)) * 100 * dt]
+    dE_complexs = [dEdx(b(E), foil, c_a, c_b) * v(b(E)) * 100 * dt]
+    Cs = []
+    L1s = []
+    L2s = []
+    i = 0
+    while E > exiting + m_a:
+        beta = b(E)
+        #print (beta)
+        dx = v(beta) * 100 * dt # cm
+        x += dx
+        dE = dEdx_simple(beta, foil) * dx
+        dE_complexs.append(dEdx(b(E), foil, c_a, c_b) * v(b(E)) * 100 * dt)
+        if i % 50 == 0:
+            print (C_Z(beta, foil, c_a, c_b))
+            print ("x =",beta**2/(a_fs**2 * Z_map[foil]))
+        dEs.append(dE)
+        E -= dE
+        Es.append(E - m_a)
+        i += 1
+        Cs.append(C_Z(beta, foil, c_a, c_b))
+        L1s.append(L1(beta, foil))
+        L2s.append(L2(beta))
+        xs.append(x)
+        #if i % 50 == 0:
+        #    plt.plot(xs, Es, label = "Es")
+        #    plt.plot(xs, [d*20 for d in dEs], label = "dEs")
+        #    plt.axhline(exiting, color = 'r', ls = '--')
+        #    plt.legend()
+        #    plt.show()
+    plt.plot(xs, Es, label = "Es")
+    plt.plot(xs, [d*20 for d in dEs], label = "dEs*20")
+    plt.plot(xs, dE_complexs, label = "With 'small' corrections")
+    labels = ["Cs", "L1s", "L2s"]
+    cols = ["magenta", "orange", "green"]
+    for i,y in enumerate((Cs, L1s, L2s)):
+        plt.plot(xs[1:], y, label = labels[i], color = cols[i])
+    plt.axhline(exiting, color = 'r', ls = '--')
+    plt.legend()
+    plt.show()
+    #print (xs)
+    print (x)
+    print (len(xs))
+    #print (dEs)
+    return x, interpolate(Es, xs)[0]
+    #return xs, Es  
 
 def thiccness(foil, incident, exiting):
     E = incident + m_a
     x = 0
-    dt = 1e-14
+    dt = 1e-16
     #print (b(E))
+    #print (E)
+    #print ("---")
+    #print (exiting + m_a)
+    #print (E)
+    if exiting > incident:
+        raise ValueError
+    i = 0
+    print ("--")
+    print (exiting)
     while E > exiting + m_a:
         beta = b(E)
-        x += v(beta) * 100 * dt # cm
-        dE = dEdx(beta, foil) * v(beta) * dt
+        dx = v(beta) * dt * 100 # cm
+        #print (dx)
+        x += dx
+        dE = dEdx(beta, foil) * v(beta) * dx
         E -= dE
+        #print (dE)
+        #print (E)
+        #print ("-")
+        #print (E)
+        i += 1
+        if i == 82 or i == 81 or i == 80:
+            print (x)
+            print (E)
+    print ("Timesteps:", i)
     return x
 
 ### FITTERS ###
@@ -228,6 +329,7 @@ def do_gold_thickness(thickness):
     plt.title("Thickness of gold foils")
     plt.legend()
     plt.show()
+    return estithicc
 
 ### attempting probability stuff ###
 
@@ -258,6 +360,9 @@ def fit_poly_gold(gold_data):
     foil_energies = get_energies(gold_data)
     incident = foil_energies['empty'].val
     # temp, I think. Need to fit multiple times for more uncertainties on p and N
+
+    print (gold_thickness())
+    dx = gold_thickness().val / 1000
     for metadata, (time, histogram) in gold_data.items():
         foil = metadata[0]
         if foil != 'empty':
@@ -268,10 +373,20 @@ def fit_poly_gold(gold_data):
 
             # get array of energy coefficients
             exiting = foil_energies[foil].val
-            x, energies = thiccness_dx(foil, incident, exiting)
-            dx = x[1] - x[0]
+            #x, energies = thiccness_dx(foil, incident, exiting)
+            print ("--")
+            print (foil)
+            #print (incident)
+            #print (exiting)
+            thickness, energy_func = thiccness_dx(foil, incident, exiting)
+            x = np.arange(0, thickness, dx)
+            energies = energy_func(x)
+            print (x)
+            print (energies)
             coeffs.append(poly_coeffs(energies))
 
+    N, positive_roots = cheater_poly(coeffs[0], coeffs[1], p_scatter[0].val, p_scatter[1].val)
+    N2, positive_roots2 = cheater_poly(coeffs[2], coeffs[1], p_scatter[2].val, p_scatter[1].val)
     #p_scatter_1 = np.dot(p_scatter, [2] + [1] * (len(p_scatter) - 2) + [0]) / len(p_scatter)
     #p_scatter_2 = np.dot(p_scatter, [0] + [1] * (len(p_scatter) - 2) + [2]) / len(p_scatter)
     #print (p_scatter_1)
@@ -286,9 +401,80 @@ def fit_poly_gold(gold_data):
     print (lmfit.fit_report(result))
     """
 
+def cheater_poly(coeffs1, coeffs2, y1, y2):
+    c1 = coeffs1[::-1]
+    c2 = coeffs2[::-1]
+    factor = np.polyval(c1, 0.5) 
+    #print ("p = 0.5:", factor)
+    c1_prior =np.array([0] * (max(len(coeffs1), len(coeffs2)) - len(coeffs1)) + c1)
+    c2_prior = np.array([0] * (max(len(coeffs1), len(coeffs2)) - len(coeffs2)) + c2) 
+    #print ("c1_prior:", c1_prior)
+    #print ("Prior:", np.polyval(c1_prior, 0.5))
+    c1 = c1_prior / factor
+    c2 = c2_prior / factor
+    #print (coeffs1)
+    #print (c1)
+    #print (c2)
+    print ("scaling factor", factor)
+
+    pvals = np.linspace(0, 1, 100)
+    pevals1 = np.polyval(c1, pvals)
+    pevals2 = np.polyval(c2, pvals)
+    plt.plot(pvals, pevals1)
+    plt.plot(pvals, pevals2)
+    plt.plot(pvals, pevals2/pevals1)
+    plt.axhline(y2 / y1, ls = '--')
+    plt.show()
+    #print ("After scaling:", np.polyval(c1, 0.5), np.polyval(c2, 0.5))
+    #print (np.polyval(c1_prior, 0.5) / factor)
+    # coefficients seem to be working so far. 
+    """
+    new_coeffs = (y2 * c1 - y1 * c2)
+    #print (new_coeffs)
+    roots = np.roots(new_coeffs)
+    print (roots)
+    complex_threshold = 1e-8
+    real_roots = np.real(roots)[np.abs(roots - np.real(roots)) < complex_threshold]
+    print (real_roots)
+    #print (real_roots)
+    positive_roots = real_roots[real_roots > 0]
+    print (positive_roots)
+    valid_roots = positive_roots[positive_roots < 1]
+    print (valid_roots)
+    #print (real_roots)
+    #print ("roots:", positive_roots)
+    evals = np.polyval(c1, valid_roots), np.polyval(c2, valid_roots)
+    #print ("Polynomial evaluations:", evals)
+    #print ("check:", y2 * np.polyval(c1, valid_roots) - y1 * np.polyval(c2, valid_roots))
+    print (evals)
+    N1 = y1 / (evals[0] * factor)
+    print (N1)
+    N2 = y2 / (evals[1] * factor)
+    print (N2)
+    if abs(N1 - N2) > 1e-8:
+        print ("Something went wrong")
+        raise Exception
+    """    
+    #print (np.polyval(new_coeffs, valid_roots))
+    #print (y1 * evals[1])
+    #print (y2 * evals[0])
+    #print (y2/y1)
+    #print (evals[1] / evals[0])
+    print ("--")
+    
+    #print (N2)
+    #print ("y1 =",y1)
+    #print (N1 * np.polyval(coeffs1, positive_roots))
+    #print ("y2 =",y2)
+    #print (N2 * np.polyval(coeffs2, positive_roots))
+    
+    #return N, positive_roots
+
 #from sympy import symbols, Eq, solve
-def solve_simultaneous(func):
-    pass #TODO
+def solve_simultaneous(poly1, y1, poly2, y2):
+    p = 1
+    N = y1 / poly1(p)
+    bigboi = poly2(p)/poly1(p) 
 
 
 
@@ -302,21 +488,27 @@ def energy_data():
     #print (data.keys())
     return data
 
-def gold_data(empty = True):
+def read_gold_data(empty = True):
     data = {}
     recursive_read(data, "data", require = [0], reject = ["titanium", "iron"] if empty else ["titanium", "iron", "empty"])
     #print (data.keys())
     return data
 
+def gold_thickness():
+    data = energy_data()
+    energies = get_energies(data, verbose = True)
+    thickness = get_thickness(energies, verbose = True)
+    return do_gold_thickness(thickness)
+
 if __name__ == '__main__':
 
-    data = gold_data()
+    #data = read_gold_data()
     #energies = get_energies(data)
-    fit_poly_gold(data)
+    #fit_poly_gold(data)
     
-    #data = energy_data()
-    #energies = get_energies(data, verbose = True)
-    #thickness = get_thickness(energies, verbose = True)
-    #do_gold_thickness(thickness)
+    data = energy_data()
+    energies = get_energies(data, verbose = True)
+    thickness = get_thickness(energies, verbose = True)
+    do_gold_thickness(thickness)
 
     ## Gold thickness ##

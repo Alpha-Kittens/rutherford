@@ -227,18 +227,23 @@ class AsymmetricResult(Result):
         stat_attempts = attempts(stats)
         sys_attempts = attempts(syss)
         for stat_attempt in stat_attempts:
-            eval = function(*stat_attempt)
-            if eval > val + highstat:
-                highstat = abs(eval - val)
-            if eval < val - lowstat:
-                lowstat = abs(eval - val)
+            try:
+                eval = function(*stat_attempt)
+                if eval > val + highstat:
+                    highstat = abs(eval - val)
+                if eval < val - lowstat:
+                    lowstat = abs(eval - val)
+            except:
+                print ("Error was raised by function. Skipping")
         for sys_attempt in sys_attempts:
-            eval = function(*sys_attempt)
-            if eval - val > val + highsys:
-                highsys = abs(eval - val)
-            if eval < val - lowsys:
-                lowsys = abs(eval - val)
-
+            try:
+                eval = function(*sys_attempt)
+                if eval - val > val + highsys:
+                    highsys = abs(eval - val)
+                if eval < val - lowsys:
+                    lowsys = abs(eval - val)
+            except:
+                print ("Error was raised by function. Skipping")
         return AsymmetricResult(val, stathigh = highstat, statlow = lowstat, syshigh = lowsys)
 
 

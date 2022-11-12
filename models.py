@@ -49,18 +49,23 @@ def interpolate(p, pdomain):
         try:
             eval = []
             for xi in x:
-                if xi >= max(pdomain) or xi <= min(pdomain):
+                if xi > max(pdomain) or xi < min(pdomain):
                     print(xi)
                     print ("can only interpolate between valid convolution bounds: must have x >", min(pdomain), "| x <", max(pdomain))
                     raise ValueError
+                if xi in pdomain: 
+                    return p[pdomain.index(xi)]
                 lows = pdomain <= xi
                 highs = pdomain >= xi
                 u = (xi - pdomain[lows][-1])/(pdomain[highs][0] - pdomain[lows][-1]) # between 0 and 1. 0 if at xlow, 1 if at xhigh
+                print (u)
                 eval.append(p[lows][-1] * (1 - u) + p[highs][0] * (u))
         except:
-            if x >= max(pdomain) or x <= min(pdomain):
+            if x > max(pdomain) or x < min(pdomain):
                 print ("can only interpolate between valid convolution bounds: must have x >", min(pdomain), "| x <", max(pdomain))
                 raise ValueError
+            if x in pdomain: 
+                return p[pdomain.index(x)]
             lows = pdomain <= x
             highs = pdomain >= x
             u = (x - pdomain[lows][-1])/(pdomain[highs][0] - pdomain[lows][-1]) # between 0 and 1. 0 if at xlow, 1 if at xhigh
