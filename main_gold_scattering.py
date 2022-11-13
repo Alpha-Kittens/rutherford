@@ -42,6 +42,6 @@ convolutions1, domains = get_rutherford_convolutions1(profile_sets, min_angle = 
 data = get_scattering_data('gold', min_angle=10, folder = 'gold_scattering/', plot=True)
 
 
-processed_data = process_scattering_data(profile=profile_sets[0], data=data, plotSlope=True)
+processed_data = process_scattering_data(profile=profile_sets[0], data=data, plot=True)
 #compare_models_plot(processed_data, rutherford_convolution=convolutions1[0])
 compare_chi2(processed_data, rutherford_convolutions=convolutions1, domains=domains)

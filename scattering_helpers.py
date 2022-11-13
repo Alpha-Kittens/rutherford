@@ -13,15 +13,6 @@ import lmfit
 
 f = lambda theta : 1/(np.sin(theta / 2 * np.pi / 180))**4    
 
-def scattering_model(x, a = 1e-5, b = 0):
-    try:
-        return a * f(x) + b
-    except:
-        y = []
-        for i in x:
-            y.append(scattering_model(i))
-        return y
-
 
 def scattering_unpack(cps, angle, metadata, entry, time_err = 2/np.sqrt(12), angle_err = 0.5):
     """
@@ -185,6 +176,11 @@ def get_scattering_data(element, min_angle, folder, plot=True, emoji = ":P", sho
 
 
 def plot_data(data, show=True, title = None, ylabel='CPS'):
+    '''
+    plots any kind of data data must of be the form list: [x, y, xerr, yerr]
+    ylabel is default set to CPS
+    Has options to not show the plot, to add a title, or to modify the y-axis label
+    '''
     x = data[0]
     y = data[1]
     xerr = data[2]
@@ -199,27 +195,9 @@ def plot_data(data, show=True, title = None, ylabel='CPS'):
         plt.show()
 
 
-def approximate_conv_slopes(profile, data, min_angle=10, plotConv=False):
-    '''
-    Using a basic profile fit, convolves with rutherford scattering to get a slope estimation at any point
-    '''
-    convolution, domain, angles = convolve_with_rutherford1(profile, min_angle)
-
-    
-    function, domain = interpolate(convolution, domain)
-    model = lambda x, a=(1e-10), b=0 : a * np.array(function(x)) + b
-    result = fit_to_scattering(data, model, plot=False)
-
-    a = result.params['a'].value
-    b = result.params['b'].value
-
-    if plotConv:
-        plot_fit(result, model, data, show=False, label='Convolution')
-
-    return lambda x: convolution_slope(x, a * np.array(convolution), domain)
 
 
-def process_scattering_data(profile, data, plotSlope=False):
+def process_scattering_data(profile, data, plot=False):
     '''
     Given the result of "get scattering data", it propogates errors like the x-errors and the energy errors to give data
     ready to be fit.
@@ -244,11 +222,12 @@ def process_scattering_data(profile, data, plotSlope=False):
 
     data_new = [x, newy, xerr, newyerr]
 
-    plot_data(data_new, show=True, title="New data (energy errors added)", ylabel='CPS * E^2')
+    if plot:
+        plot_data(data_new, show=True, title="New data (energy errors added)", ylabel='CPS * E^2')
 
     # Propogation of x-errors
     slope_function = approximate_conv_slopes(profile, data = data_new, plotConv=True)
-    if plotSlope:
+    if plot:
         x_vals=np.linspace(min(x), max(x), 1000)
         y_eval=[]
         for i in x_vals:
@@ -265,9 +244,34 @@ def process_scattering_data(profile, data, plotSlope=False):
         final_yerrs.append(final_yerr)
     
     final_data = [x, newy, final_x_errs, final_yerrs]
-    plot_data(final_data, show=True, title="Processed Data (All errors propogated)", ylabel='CPS * E^2')
+    if plot:
+        plot_data(final_data, show=True, title="Processed Data (All errors propogated)", ylabel='CPS * E^2')
 
     return final_data
+
+
+
+def approximate_conv_slopes(profile, data, min_angle=10, plotConv=False):
+    '''
+    Using a basic profile fit, convolves with rutherford scattering to get a slope estimation at any point
+    Note that this uses convolution1 not convolution2
+    '''
+    convolution, domain, angles = convolve_with_rutherford1(profile, min_angle)
+
+    
+    function, domain = interpolate(convolution, domain)
+    model = lambda x, a=(1e-10), b=0 : a * np.array(function(x)) + b
+    result = fit_to_scattering(data, model, plot=False)
+
+    a = result.params['a'].value
+    b = result.params['b'].value
+
+    if plotConv:
+        plot_fit(result, model, data, show=False, label='Convolution')
+
+    return lambda x: convolution_slope(x, a * np.array(convolution), domain)
+
+
 
 
 
@@ -322,20 +326,19 @@ def get_rutherford_convolutions1(profile_sets, min_angle = 10, plot=False):
         plt.legend()
         plt.show()
 
-    print(type(convolutions))
     return convolutions, domains
 
 
-def convolve_with_rutherford2(profile, min_angle):
+def convolve_with_rutherford2(profile, min_angle = 10):
     '''
-    implements the second version of convolve
+    implements the second version of convolve, returns a callable function
     '''
     normalization = f(min_angle) / convolve2(f, profile, min_angle)
     return lambda x : normalization * convolve2(f, profile, x)
 
 def get_rutherford_convolutions2(profiles, min_angle = 10, plot=True):
     '''
-    implements convolve_with_rutherford2 are returns an array of convolutions (callable) given a list of profiles
+    implements convolve_with_rutherford2 for each profile and returns an array of convolutions (callable) given a list of profiles
     '''
     convolutions = []
     for profile in profiles:
@@ -362,34 +365,21 @@ FITTING METHODS
 '''
 '''
 '''
-def get_rutherford_models(rutherford_convolutions, domains, plot=False):
+def scattering_model(x, a = 1e-5, b = 0):
     '''
-    implements interpolate from models to convert rutherford_convolutions into callable functions
-    plotting might kill your computer :( lol
+    the model for pure (no convolution) rutherford scattering
     '''
-    models = []
-    for i in range(len(rutherford_convolutions)):
-        convolution = rutherford_convolutions[i]
-        f_domain = domains[i]
-        func, domain = interpolate(convolution, f_domain)
-        model = lambda x, a=(1e-10), b=0 : a * np.array(func(x)) + b
-        models.append(model)
-       
-        
-        if plot:
-            x_vals=np.linspace(min(f_domain) + 0.01, max(f_domain) - 0.01, 1000)
-            y_vals = []
-            for x in x_vals:
-                y_val = (1e-4) * model(x)
-                y_vals.append(y_val)
-            plt.plot(x_vals, y_vals, label = "convolution " + str(i))
-            plt.show()
-    return models
-
+    try:
+        return a * f(x) + b
+    except:
+        y = []
+        for i in x:
+            y.append(scattering_model(i))
+        return y
 
 def fit_to_scattering(data, model, plot=True):
     ''''
-    fits a model to scattering data
+    fits a given model to the given data. Again data must be of the form list: [x, y, xerr, yerr]
     '''
     #angle, cps, angle_err, cps_err = get_scattering_data(element, min_angle, folder, plot=False)
 
@@ -416,9 +406,9 @@ def fit_to_scattering(data, model, plot=True):
 def rutherford_fits(data, convolutions, domains = None, plot=True):
     '''
     given a bunch of convolutions (from either convolve method convolve1 or convolve2)
-    it fits all of them and plots the chi2 distribution for them
+    Note that if using convolutions from convolve1 you must also pass domains
+    it fits all of them and returns the distribution of chi2
     '''
-
     chi2 = []
     for i in range(len(convolutions)):
         print("Fitting Function: " + str(i))
@@ -448,11 +438,12 @@ def rutherford_fits(data, convolutions, domains = None, plot=True):
     return chi2
 
 
-def plot_fit(result, model, data, show=True, label=None):
+def plot_fit(result, model, data, show=True, label=None, initial=False):
     '''
     given a result and model for scattering data, it plots the fit.
+    label lets you change what is given in the legend for this fit
+    intial is a boolean letting you decide if you want to plot intial fit guesses
     '''
-
     plot_data(data, show=False, title = None)
 
     x = data[0]
@@ -471,14 +462,14 @@ def plot_fit(result, model, data, show=True, label=None):
     else:
         plt.plot(x_vals, y_eval, label='fit')
 
-
-    initial_y= []
-    for i in x_vals:
-        initial_y.append(model(i, init_params['a'].value, params['b'].value))
-    if label is not None:
-        plt.plot(x_vals, initial_y, label = 'initial guess ' + label)
-    else:
-        plt.plot(x_vals, initial_y, label = 'initial guess')
+    if initial:
+        initial_y= []
+        for i in x_vals:
+            initial_y.append(model(i, init_params['a'].value, params['b'].value))
+        if label is not None:
+            plt.plot(x_vals, initial_y, label = 'initial guess ' + label)
+        else:
+            plt.plot(x_vals, initial_y, label = 'initial guess')
     if show:
         plt.legend()
         plt.show()
@@ -486,7 +477,8 @@ def plot_fit(result, model, data, show=True, label=None):
 
 def rutherford_scattering_fit(data, plot=False):
     '''
-    pure rutherford (no convolution) fit to scattering data
+    pure rutherford (no convolution) fit to  data
+    again, data must be of the form list: [x, y, xerr, yerr]
     '''
     x = data[0]
     y = data[1]
@@ -513,7 +505,6 @@ def compare_models_plot(data, rutherford_convolution, domain=None):
     '''
     Takes a rutherford convolution, and data specifications and prints the fitting for that in comparison to no convolution
     '''
-
     try:
         function, domain = interpolate(rutherford_convolution, domain)
         print(':P')
@@ -533,9 +524,11 @@ def compare_models_plot(data, rutherford_convolution, domain=None):
     plt.legend()
     plt.show()
 
+
 def compare_chi2(data, rutherford_convolutions, domains=None):
     '''
-    Plots the distribution of chi2 and the result for just the scattering model
+    Plots the distribution of chi2 for rutherford convolutions and a vertical line for 
+    no convolution fit chi2
     '''
     no_conv_chi = rutherford_scattering_fit(data).redchi
     print(no_conv_chi)
