@@ -38,6 +38,9 @@ def minus(tup):
 def resultify(tup):
     return Result(tup[0], stat = tup[1])
 
+def resultify_fit(model, params):
+    pass
+
 class Result:
 
     def __init__(self, val, stat = 0, sys = 0, tot = 0):
@@ -116,12 +119,12 @@ class Result:
     def __pow__(self, other):
         try:
             val = self.val ** other.val
-            stat = np.sqrt((other.val * self.val**(other - 1) * self.stat)**2 + (self.val**other.val * np.log(self.val) * other.stat)**2)
-            sys = np.sqrt((other.val * self.val**(other - 1) * self.sys)**2 + (self.val**other.val * np.log(self.val) * other.sys)**2)
+            stat = np.sqrt((other.val * self.val**(other.val - 1) * self.stat)**2 + (self.val**other.val * np.log(self.val) * other.stat)**2)
+            sys = np.sqrt((other.val * self.val**(other.val - 1) * self.sys)**2 + (self.val**other.val * np.log(self.val) * other.sys)**2)
         except:
             val = self.val ** other
-            stat = other * self.val**(other-1) * self.stat
-            sys = other * self.val**(other-1) * self.stat
+            stat = abs(other) * self.val**(other-1) * self.stat
+            sys = abs(other) * self.val**(other-1) * self.stat
         tot = np.sqrt(stat**2 + sys**2)
         return Result(val, stat = stat, sys = sys, tot = tot)
 
@@ -190,12 +193,12 @@ class AsymmetricResult(Result):
             if self.syshigh == self.syslow and self.syshigh != 0:
                 string += " ± " + str(self.sys) + " (sys)"
             else:
-                string += " + " + str(self.syshigh) + ", - " + str(self.syslow) + " (sys)"
+                string += " + " + str(self.syshigh) + "/- " + str(self.syslow) + " (sys)"
 
         return string
 
     @staticmethod
-    def asymmetric_evaluate(function, *args):
+    def asymmetric_evaluate(function, *args, progress = False):
         """
         Given a function and arguments, some of which are Result objects, finds error bounds on the evaluation of the function.
         Assumes that critical points of function are on boundary of uncertainty region; reasonable for well-behaved functions and smallish relative errors?
@@ -226,24 +229,35 @@ class AsymmetricResult(Result):
         val = function(*eval_args)
         stat_attempts = attempts(stats)
         sys_attempts = attempts(syss)
+        total_attempts = len(stat_attempts) + len(sys_attempts)
+        i = 1
         for stat_attempt in stat_attempts:
+            if progress:
+                print (str(i)+"/"+str(total_attempts))
+                i += 1
             try:
                 eval = function(*stat_attempt)
                 if eval > val + highstat:
                     highstat = abs(eval - val)
                 if eval < val - lowstat:
                     lowstat = abs(eval - val)
-            except:
-                print ("Error was raised by function. Skipping")
+            except Exception as e:
+                print (e, ", skipping")
+
         for sys_attempt in sys_attempts:
+            if progress:
+                print (str(i)+"/"+str(total_attempts))
+                i += 1
             try:
                 eval = function(*sys_attempt)
-                if eval - val > val + highsys:
+                if eval > val + highsys:
+                    #print ("highsys")
                     highsys = abs(eval - val)
                 if eval < val - lowsys:
+                    #print ("lowsys")
                     lowsys = abs(eval - val)
-            except:
-                print ("Error was raised by function. Skipping")
-        return AsymmetricResult(val, stathigh = highstat, statlow = lowstat, syshigh = lowsys)
+            except Exception as e:
+                print (e, ", skipping")
+        return AsymmetricResult(val, stathigh = highstat, statlow = lowstat, syshigh = highsys, syslow = lowsys)
 
 
