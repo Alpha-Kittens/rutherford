@@ -154,8 +154,132 @@ if __name__ == '__main__':
 
 
 
+'''
+'''
+'''
+DATA METHODS
+'''
+'''
+'''
+def get_scattering_data(element, min_angle, folder, plot=True, emoji = ":P", show=True):
+    '''
+    gets the scattering data from a selected folder, and a given element
+    '''
+    data = {}
+    recursive_read(data, folder, require = [element], condition = lambda metadata : metadata[1] > min_angle)
+
+    cps_raw = []
+    angle_raw = []
+    for metadata, entry in data.items():
+        scattering_unpack(cps_raw, angle_raw, metadata, entry)
+    
+    angle, angle_err = plotting_unpack(angle_raw)
+    cps, cps_err = plotting_unpack(cps_raw)
+
+    data = [angle, cps, angle_err, cps_err]
+
+    if plot:
+        plot_data(data, show=show, title = element + " scattering " + emoji)
+
+    return data
 
 
+def plot_data(data, show=True, title = None, ylabel='CPS'):
+    x = data[0]
+    y = data[1]
+    xerr = data[2]
+    yerr = data[3]
+
+    plt.errorbar(x, y, xerr = xerr, yerr = yerr, marker = '.', ls = 'none', color = 'black')
+    plt.xlabel("Angle (degrees)")
+    plt.ylabel(ylabel)
+    if title is not None:
+        plt.title(title)
+    if show:
+        plt.show()
+
+
+def approximate_conv_slopes(profile, data, min_angle=10, plotConv=False):
+    '''
+    Using a basic profile fit, convolves with rutherford scattering to get a slope estimation at any point
+    '''
+    convolution, domain, angles = convolve_with_rutherford1(profile, min_angle)
+
+    
+    function, domain = interpolate(convolution, domain)
+    model = lambda x, a=(1e-10), b=0 : a * np.array(function(x)) + b
+    result = fit_to_scattering(data, model, plot=False)
+
+    a = result.params['a'].value
+    b = result.params['b'].value
+
+    if plotConv:
+        plot_fit(result, model, data, show=False, label='Convolution')
+
+    return lambda x: convolution_slope(x, a * np.array(convolution), domain)
+
+
+def process_scattering_data(profile, data, plotSlope=False):
+    '''
+    Given the result of "get scattering data", it propogates errors like the x-errors and the energy errors to give data
+    ready to be fit.
+    '''
+    x = data[0]
+    y = data[1]
+    xerr = data[2]
+    yerr = data[3]
+
+    from energy_loss_2 import expected_E_square
+
+    # Energy Uncertainties
+    E = expected_E_square('gold')
+    Evalue = E.val
+    Eerror = math.sqrt(E.sys **2 + E.stat **2)
+    newy = Evalue * np.array(y)
+
+    newyerr = []
+    for i in range(len(yerr)):
+        new_err = math.sqrt(yerr[i]**2 + (y[i]*Eerror)**2)
+        newyerr.append(new_err)
+
+    data_new = [x, newy, xerr, newyerr]
+
+    plot_data(data_new, show=True, title="New data (energy errors added)", ylabel='CPS * E^2')
+
+    # Propogation of x-errors
+    slope_function = approximate_conv_slopes(profile, data = data_new, plotConv=True)
+    if plotSlope:
+        x_vals=np.linspace(min(x), max(x), 1000)
+        y_eval=[]
+        for i in x_vals:
+            y_eval.append(slope_function(i))
+        plt.plot(x_vals, y_eval, label='slope')
+        plt.legend()
+        plt.show()
+    
+    final_yerrs = []
+    final_x_errs = []
+    for i in range(len(newyerr)):
+        final_x_errs.append(0)
+        final_yerr = math.sqrt(newyerr[i]**2 + (xerr[i] * slope_function(x[i]))**2)
+        final_yerrs.append(final_yerr)
+    
+    final_data = [x, newy, final_x_errs, final_yerrs]
+    plot_data(final_data, show=True, title="Processed Data (All errors propogated)", ylabel='CPS * E^2')
+
+    return final_data
+
+
+
+
+
+'''
+'''
+'''
+CONVOLUTION METHODS
+'''
+'''
+'''
 def convolve_with_rutherford1(profile, min_angle = 10):
     '''
     implements the convolve method in models to convolve a beam profile with the rutherford model
@@ -230,102 +354,14 @@ def get_rutherford_convolutions2(profiles, min_angle = 10, plot=True):
     return convolutions
 
 
-def get_scattering_data(element, min_angle, folder, plot=True, emoji = ":P", show=True):
-    '''
-    gets the scattering data from a selected folder, and a given element
-    '''
-    data = {}
-    recursive_read(data, folder, require = [element], condition = lambda metadata : metadata[1] > min_angle)
 
-    cps_raw = []
-    angle_raw = []
-    for metadata, entry in data.items():
-        scattering_unpack(cps_raw, angle_raw, metadata, entry)
-    
-    angle, angle_err = plotting_unpack(angle_raw)
-    cps, cps_err = plotting_unpack(cps_raw)
-
-    data = [angle, cps, angle_err, cps_err]
-
-    '''
-    if plot:
-        plt.errorbar(angle, cps, xerr = angle_err, yerr = cps_err, marker = '.', ls = 'none', color = 'black')
-        plt.xlabel("Angle (degrees)")
-        plt.ylabel("CPS")
-        plt.title(element + " scattering " + emoji)
-        if show:
-            plt.show()
-    '''
-    if plot:
-        plot_data(data, show=show, title = element + " scattering " + emoji)
-
-    return data
-
-
-def plot_data(data, show=True, title = None):
-    x = data[0]
-    y = data[1]
-    xerr = data[2]
-    yerr = data[3]
-
-    plt.errorbar(x, y, xerr = xerr, yerr = yerr, marker = '.', ls = 'none', color = 'black')
-    plt.xlabel("Angle (degrees)")
-    plt.ylabel("CPS")
-    if title is not None:
-        plt.title(title)
-    if show:
-        plt.show()
-
-def approximate_conv_slopes(profile, raw_data, min_angle=10, plotConv=False):
-    '''
-    Using a basic profile fit, convolves with rutherford scattering to get a slope estimation at any point
-    '''
-    convolution, domain, angles = convolve_with_rutherford1(profile, min_angle)
-
-    
-    function, domain = interpolate(convolution, domain)
-    model = lambda x, a=(1e-10), b=0 : a * np.array(function(x)) + b
-    result = fit_to_scattering(raw_data, model, plot=False)
-
-    a = result.params['a'].value
-    b = result.params['b'].value
-
-    if plotConv:
-        plot_fit(result, model, raw_data, show=False, label='Convolution')
-
-    return lambda x: convolution_slope(x, a * np.array(convolution), domain)
-
-
-    
-
-
-def process_scattering_data(profile, data):
-    '''
-    Given the result of "get scattering data", it propogates errors like the x-errors and the energy errors to give data
-    ready to be fit.
-    '''
-
-    # Propogation of x-errors
-    slope_function = approximate_conv_slopes(profile, raw_data = data, plotConv=True)
-
-    x = data[0]
-    y = data[1]
-    xerr = data[2]
-    yerr = data[3]
-
-
-
-    #plt.errorbar(x, y, yerr=slope_function(x), label='slopes')
-    x_vals=np.linspace(min(x), max(x), 1000)
-    y_eval=[]
-    for i in x_vals:
-        y_eval.append(slope_function(i))
-    plt.plot(x_vals, y_eval, label='slope')
-    plt.legend()
-    plt.show()
-
-
-
+'''
+'''
+'''
+FITTING METHODS
+'''
+'''
+'''
 def get_rutherford_models(rutherford_convolutions, domains, plot=False):
     '''
     implements interpolate from models to convert rutherford_convolutions into callable functions
@@ -468,6 +504,11 @@ def rutherford_scattering_fit(data, plot=False):
     
     return result2
 
+
+
+'''
+RESULTS METHODS
+'''
 def compare_models_plot(data, rutherford_convolution, domain=None):
     '''
     Takes a rutherford convolution, and data specifications and prints the fitting for that in comparison to no convolution
@@ -492,7 +533,7 @@ def compare_models_plot(data, rutherford_convolution, domain=None):
     plt.legend()
     plt.show()
 
-def compare_chi2(data, rutherford_convolutions, domain=None):
+def compare_chi2(data, rutherford_convolutions, domains=None):
     '''
     Plots the distribution of chi2 and the result for just the scattering model
     '''
@@ -501,7 +542,7 @@ def compare_chi2(data, rutherford_convolutions, domain=None):
 
     plt.vlines(no_conv_chi, ymin=0, ymax=5, label='no convolution', linestyles='dashed', color='red')
 
-    rutherford_chi = rutherford_fits(data, rutherford_convolutions, domain, plot=False)
+    rutherford_chi = rutherford_fits(data, rutherford_convolutions, domains, plot=False)
 
     plt.hist(rutherford_chi, label='convolutions')
     plt.xlabel('reduced chi square')

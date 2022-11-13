@@ -36,14 +36,12 @@ RUTHERFORD SCATTERING
 '''
 ###
 
-#convolutions1, domains = get_rutherford_convolutions1(profile_sets, min_angle = 1, plot=True)
-convolutions2 = get_rutherford_convolutions2(profile_sets, min_angle = 10, plot=True)
+convolutions1, domains = get_rutherford_convolutions1(profile_sets, min_angle = 1, plot=True)
+#convolutions2 = get_rutherford_convolutions2(profile_sets, min_angle = 10, plot=True)
 
 data = get_scattering_data('gold', min_angle=10, folder = 'gold_scattering/', plot=True)
 
-#rutherford_fits('gold', min_angle=10, folder = 'gold_scattering/', convolutions=convolutions1, domains=domains)
-#rutherford_fits('gold', min_angle=10, folder = 'gold_scattering/', convolutions=convolutions2)
 
-#compare_models_plot(data, rutherford_convolution=convolutions2[0])
-process_scattering_data(profile=profile_sets[0], data=data)
-#compare_chi2(data, rutherford_convolutions=convolutions2)
+processed_data = process_scattering_data(profile=profile_sets[0], data=data, plotSlope=True)
+#compare_models_plot(processed_data, rutherford_convolution=convolutions1[0])
+compare_chi2(processed_data, rutherford_convolutions=convolutions1, domains=domains)
