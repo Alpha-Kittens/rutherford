@@ -531,7 +531,7 @@ def compare_chi2(data, rutherford_convolutions, domains=None):
     '''
     no_conv_chi = rutherford_scattering_fit(data).redchi
 
-    plt.vlines(no_conv_chi, ymin=0, ymax=5, label='no convolution', linestyles='dashed', color='red')
+    plt.vlines(no_conv_chi, ymin=0, ymax=len(rutherford_convolutions)/4, label='no convolution', linestyles='dashed', color='red')
 
     rutherford_chi = rutherford_fits(data, rutherford_convolutions, domains, plot=False)
 
