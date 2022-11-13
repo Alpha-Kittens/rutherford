@@ -98,6 +98,29 @@ def expected_E_inverse_square(foil):
     recursive_read(data, "data", require = [0], reject = ["titanium", "iron"])
     energies = get_energies(data)
     xs, Es = thiccness_dx(foil, energies['empty'].val, energies[foil].val, c_a[foil].val, c_b[foil].val, dx = 1e-6)
+    squares = np.array(Es)**2
+    pdf = [poly_x(i+1, Es, p) for i in range(len(xs))]
+    E = np.dot(pdf, squares) / np.sum(pdf)
+    var = np.dot(pdf, squares**2) / np.sum(pdf) - E**2
+    E.stat = (var **(1/2)).val
+    #plt.plot(xs, [px.val for px in pdf])
+    #plt.axvline(E.val)
+    #plt.show()
+    #print ("-")
+    #print ("incident E:", energies['empty'])
+    #print ("exiting E:", energies[foil])
+    #print ("Expected E:", np.dot(pdf, Es)/np.sum(pdf))
+    
+    return E
+
+def expected_E_inverse_square(foil):
+    if foil == 'iron':
+        print ("Iron is unimplemented")
+        raise Exception
+    data = {}
+    recursive_read(data, "data", require = [0], reject = ["titanium", "iron"])
+    energies = get_energies(data)
+    xs, Es = thiccness_dx(foil, energies['empty'].val, energies[foil].val, c_a[foil].val, c_b[foil].val, dx = 1e-6)
     inverse_square = 1/np.array(Es)**2
     pdf = [poly_x(i+1, Es, p) for i in range(len(xs))]
     E = np.dot(pdf, inverse_square) / np.sum(pdf)
