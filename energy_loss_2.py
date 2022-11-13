@@ -337,7 +337,8 @@ def poly_bisection(f, g, ratio):
     pguess = (pmax + pmin)/2
     threshold = 1e-8
     sign = 1 if ratio > 1 else -1
-    while abs((rguess := g(pguess) / f(pguess)) - ratio) > threshold:
+    rguess =  g(pguess) / f(pguess)
+    while abs((rguess) - ratio) > threshold:
         if sign*rguess > sign*ratio:
             pmin = pguess
         else:
@@ -345,6 +346,7 @@ def poly_bisection(f, g, ratio):
         #print (rguess)
         #print (pguess)
         pguess = (pmax + pmin)/2
+        rguess =  g(pguess) / f(pguess)
         if pguess < 1e-5:
             raise Exception
     return pguess

@@ -287,10 +287,9 @@ def optimal_function_fit(histogram):
 
 
 
-
-if __name__ == '__main__':
+def fitting_moyals(plot = False):
     padding = [0] * 1000
-    from data_loader import *
+    from data_loader import recursive_read
     data = {}
     recursive_read(data, "data", require = [0], reject = ['titanium'])    
     #foils = ('gold', '2gold', '4gold', 'iron')
@@ -308,20 +307,53 @@ if __name__ == '__main__':
         ys.append(func(x))
         locs.append(loc)
         scales.append(scale)
-    for i, foil in enumerate(foils):
-        plt.plot(xs[i], ys[i], label = foil)
-    plt.legend()
-    plt.show()
     from scattering_helpers import plotting_unpack
     ly, lyerr = plotting_unpack(locs)
     sy, syerr = plotting_unpack(scales)
-    plt.title("Locations")
-    plt.errorbar(numbers, ly, yerr = lyerr, ls = 'none', marker = 'o')
-    plt.show()
-    plt.title("Scales")
-    plt.errorbar(numbers, sy, yerr = syerr, ls = 'none', marker = 'o')
-    plt.show()
+
+    from energy_loss_2 import get_energies, get_thickness
+    thicknesses = get_thickness(get_energies(data))
+    thicknii = []
+    for foil in foils:
+        thicknii.append(thicknesses[foil])
+    thickx, thickxerr = plotting_unpack(thicknii)
+    if plot:
+        for i, foil in enumerate(foils):
+            plt.plot(xs[i], ys[i], label = foil)
+        plt.legend()
+        plt.show()
+        plt.title("Locations")
+        plt.xlabel("Foil Thickness (cm)")
+        plt.ylabel("'Loc' of moyal for convolution")
+        plt.errorbar(thickx, ly, yerr = lyerr, ls = 'none', marker = 'o')
+        plt.show()
+        plt.title("Scales")
+        plt.title("Locations")
+        plt.xlabel("Foil Thickness (cm)")
+        plt.ylabel("'Scale' of moyal for convolution")
+        plt.errorbar(thickx, sy, yerr = syerr, ls = 'none', marker = 'o')
+        plt.show()
+    linear = lambda x, a, b : a*x + b
+    model = lmfit.Model(linear)
+    slope = lambda yarr, xarr : (yarr[1] - yarr[0]) / (xarr[1] - xarr[0])
+    loc_result = model.fit(ly, x=thickx, weights = 1/np.sqrt([lyerr[i]**2 * (slope(ly, thicknii) * thickxerr[i])**2]))
+    scale_result = model.fit(sy, x=thickx, weights = 1/np.sqrt([syerr[i]**2 * (slope(sy, thicknii) * thickxerr[i])**2]))
+    print ("Loc")
+    print (loc_result.params['a'].value, loc_result.params['a'].stderr)
+    print (loc_result.params['b'].value, loc_result.params['b'].stderr)
+    print ("Scale")
+    print (scale_result.params['a'].value, scale_result.params['a'].stderr)
+    print (scale_result.params['b'].value, scale_result.params['b'].stderr)
     
+
+
+    
+    
+    
+def moyal_convolution(ihistogram, loc, scale, padding = [0] * 1000):
+    pass
+if __name__ == '__main__':
+
     
     """x = np.array(range(2048))
     # x = np.arange(0, 2047, 1)
