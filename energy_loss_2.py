@@ -90,7 +90,7 @@ m_e = 0.51099895000 #MeV
 K = 0.307075 # MeV / mol * cm^2
 a_fs = 1/137
 
-def expected_E_inverse_square(foil):
+def expected_E_square(foil):
     if foil == 'iron':
         print ("Iron is unimplemented")
         raise Exception
