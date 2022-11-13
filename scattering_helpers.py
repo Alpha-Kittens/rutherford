@@ -50,7 +50,6 @@ def plotting_unpack(results, mode = 'tot'):
     x = []
     xerr = []
     for result in results:
-        #print(result.val)
         x.append(result.val)
         if mode == 'tot':
             xerr.append(result.tot)
@@ -170,12 +169,12 @@ def get_scattering_data(element, min_angle, folder, plot=True, emoji = ":P", sho
     data = [angle, cps, angle_err, cps_err]
 
     if plot:
-        plot_data(data, show=show, title = element + " scattering " + emoji)
+        plot_data(data, show=show, title = element + " scattering " + emoji, mode='raw')
 
     return data
 
 
-def plot_data(data, show=True, title = None, ylabel='CPS'):
+def plot_data(data, show=True, title = None, mode='processed'):
     '''
     plots any kind of data data must of be the form list: [x, y, xerr, yerr]
     ylabel is default set to CPS
@@ -188,7 +187,10 @@ def plot_data(data, show=True, title = None, ylabel='CPS'):
 
     plt.errorbar(x, y, xerr = xerr, yerr = yerr, marker = '.', ls = 'none', color = 'black')
     plt.xlabel("Angle (degrees)")
-    plt.ylabel(ylabel)
+    if mode == 'processed':
+        plt.ylabel('CPS * Energy^2')
+    elif mode == 'raw':
+        plt.ylabel('CPS')
     if title is not None:
         plt.title(title)
     if show:
@@ -223,7 +225,7 @@ def process_scattering_data(profile, data, plot=False):
     data_new = [x, newy, xerr, newyerr]
 
     if plot:
-        plot_data(data_new, show=True, title="New data (energy errors added)", ylabel='CPS * E^2')
+        plot_data(data_new, show=True, title="New data (energy errors added)")
 
     # Propogation of x-errors
     slope_function = approximate_conv_slopes(profile, data = data_new, plotConv=True)
@@ -245,7 +247,7 @@ def process_scattering_data(profile, data, plot=False):
     
     final_data = [x, newy, final_x_errs, final_yerrs]
     if plot:
-        plot_data(final_data, show=True, title="Processed Data (All errors propogated)", ylabel='CPS * E^2')
+        plot_data(final_data, show=True, title="Processed Data (All errors propogated)")
 
     return final_data
 
@@ -323,6 +325,8 @@ def get_rutherford_convolutions1(profile_sets, min_angle = 10, plot=False):
 
     if plot:
         plt.plot(pdomain, f(pdomain), label = "scattering expectation", color = "red")
+        plt.ylabel('(Unnormalized) Scattering Cross Section')
+        plt.xlabel('Angle (degrees)')
         plt.legend()
         plt.show()
 
@@ -395,8 +399,6 @@ def fit_to_scattering(data, model, plot=True):
 
     themodel = lmfit.Model(model)
     result  = themodel.fit(y, x=x, weights=weights)
-
-    print('red chi: ' + str(result.redchi))
     
     if plot:
         plot_fit(result, model, element, min_angle, folder, show=True)
@@ -420,9 +422,7 @@ def rutherford_fits(data, convolutions, domains = None, plot=True):
         except:
             conv = convolutions[i]
             domain = domains[i]
-            function, domain = interpolate(conv, domain)
-            print(':P')
-        
+            function, domain = interpolate(conv, domain)        
             model = lambda x, a=(1e-10), b=0 : a * np.array(function(x)) + b
 
             result = fit_to_scattering(data, model, plot=False)
@@ -507,7 +507,6 @@ def compare_models_plot(data, rutherford_convolution, domain=None):
     '''
     try:
         function, domain = interpolate(rutherford_convolution, domain)
-        print(':P')
         model = lambda x, a=(1e-10), b=0 : a * np.array(function(x)) + b
         result = fit_to_scattering(data, model, plot=False)
     except:
@@ -531,7 +530,6 @@ def compare_chi2(data, rutherford_convolutions, domains=None):
     no convolution fit chi2
     '''
     no_conv_chi = rutherford_scattering_fit(data).redchi
-    print(no_conv_chi)
 
     plt.vlines(no_conv_chi, ymin=0, ymax=5, label='no convolution', linestyles='dashed', color='red')
 

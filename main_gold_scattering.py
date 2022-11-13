@@ -24,7 +24,7 @@ plot_frac_uncertainties()
 angles, cpss, errors = get_data()
 
 triangle_fit(x=angles, y=cpss, report=True, show=True, initial_plot=True)
-data_sets = generate_data_sets()
+data_sets = generate_data_sets(total=100)
 profile_sets = fit_data_sets(data_sets, show=True)
 
 

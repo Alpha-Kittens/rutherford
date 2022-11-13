@@ -56,7 +56,7 @@ def plot_profile_data(x = angles, y = cpss, yerr = errors, xerr = 0.5, emoji=':O
     '''
     plt.errorbar(x, y, yerr = yerr, xerr = xerr, marker='o', ls='none')
     plt.xlabel('angle')
-    plt.ylabel('counts')
+    plt.ylabel('CPS')
     plt.title('beam profile ' + emoji)
     plt.xticks(range(-10,11, 2))
     if show:
@@ -169,12 +169,14 @@ def triangle_fit(x, y, report=False, show=False, initial_plot = False):
             for i in x_vals:
                 initial_y.append(triangle_model(i, init_params['aL'].value, init_params['aR'].value, init_params['x0'].value, init_params['y0'].value))
             plt.plot(x_vals, initial_y, label = 'initial guess')
+        
+        plt.ylabel('CPS')
+        plt.xlabel('Angle (degrees)')
 
 
         if show:
             plt.legend()
             plt.show()
-            print(lmfit.fit_report(result))
     return lambda x : triangle_model(x, params['aL'].value, params['aR'].value, params['x0'].value, params['y0'].value)
 
 
