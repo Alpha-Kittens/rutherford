@@ -55,12 +55,13 @@ def interpolate(p, pdomain):
                     print ("can only interpolate between valid convolution bounds: must have x >", min(pdomain), "| x <", max(pdomain))
                     raise ValueError
                 if xi in pdomain: 
-                    return p[pdomain.index(xi)]
-                lows = pdomain <= xi
-                highs = pdomain >= xi
-                u = (xi - pdomain[lows][-1])/(pdomain[highs][0] - pdomain[lows][-1]) # between 0 and 1. 0 if at xlow, 1 if at xhigh
-                print (u)
-                eval.append(p[lows][-1] * (1 - u) + p[highs][0] * (u))
+                    eval.append(p[pdomain.index(xi)])
+                else:
+                    lows = pdomain <= xi
+                    highs = pdomain >= xi
+                    u = (xi - pdomain[lows][-1])/(pdomain[highs][0] - pdomain[lows][-1]) # between 0 and 1. 0 if at xlow, 1 if at xhigh
+                    print (u)
+                    eval.append(p[lows][-1] * (1 - u) + p[highs][0] * (u))
         except:
             if x > max(pdomain) or x < min(pdomain):
                 print ("can only interpolate between valid convolution bounds: must have x >", min(pdomain), "| x <", max(pdomain))
@@ -73,8 +74,38 @@ def interpolate(p, pdomain):
             eval = p[lows][-1] * (1 - u) + p[highs][0] * (u)
         return eval
     return pfunc, pdomain
-        
 
+
+def convolution_slope(x, convolution, domain):
+    # Find the index which is below x
+    try:
+        indexL = 0
+        for i in range(len(domain)):
+            if domain[i] < x:
+                indexL = i
+
+        if indexL + 1 < len(domain) - 1:
+            return (convolution[indexL + 1] - convolution[indexL])/ (domain[indexL + 1] - domain[indexL])
+        else:
+            raise Exception
+    except:
+        slopes = []
+        for xval in x:
+            slopes.append(convolution_slope(xval, convolution, domain))
+        return slopes
+
+
+
+
+
+def convolve2(f1,f2,x,iMin=-10,iMax=10,iN=2000):
+    step=(iMax-iMin)/iN
+    pInt=0
+    for i0 in range(iN):
+            pX   = i0*step+iMin
+            pVal = f1(x-pX)*f2(pX)
+            pInt += pVal*step
+    return pInt
 
 
 if __name__ == '__main__':

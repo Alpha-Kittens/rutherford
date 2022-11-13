@@ -35,20 +35,15 @@ profile_sets = fit_data_sets(data_sets, show=True)
 RUTHERFORD SCATTERING
 '''
 ###
-convolutions, domains = get_rutherford_convolutions(profile_sets, min_angle = 1, plot=True)
-'''
-rutherford_models = get_rutherford_models(convolutions, domains)
-#fit_to_scattering('gold', min_angle=10, folder = 'gold_scattering/', model=rutherford_models[0])
-for model in rutherford_models:
-    x_vals=np.linspace(11 + 0.01, 60 - 0.01, 1000)
-    y_vals = []
-    for x in x_vals:
-        y_val = (1e-4) * model(x)
-        y_vals.append(y_val)
-    plt.plot(x_vals, y_vals, label = "convolution " )
-plt.show()
-'''
-get_scattering_data('gold', min_angle=10, folder = 'gold_scattering/', plot=True)
-rutherford_fits('gold', min_angle=10, folder = 'gold_scattering/', convolutions=convolutions, domains=domains)
 
-compare_models_plot('gold', min_angle=10, folder = 'gold_scattering/', rutherford_convolution=convolutions[0], domain=domains[0])
+#convolutions1, domains = get_rutherford_convolutions1(profile_sets, min_angle = 1, plot=True)
+convolutions2 = get_rutherford_convolutions2(profile_sets, min_angle = 10, plot=True)
+
+data = get_scattering_data('gold', min_angle=10, folder = 'gold_scattering/', plot=True)
+
+#rutherford_fits('gold', min_angle=10, folder = 'gold_scattering/', convolutions=convolutions1, domains=domains)
+#rutherford_fits('gold', min_angle=10, folder = 'gold_scattering/', convolutions=convolutions2)
+
+#compare_models_plot(data, rutherford_convolution=convolutions2[0])
+process_scattering_data(profile=profile_sets[0], data=data)
+#compare_chi2(data, rutherford_convolutions=convolutions2)
