@@ -90,18 +90,29 @@ m_e = 0.51099895000 #MeV
 K = 0.307075 # MeV / mol * cm^2
 a_fs = 1/137
 
-def expected_E_square(foil):
+def expected_E_square(foil, use_moyal = False):
     if foil == 'iron':
         print ("Iron is unimplemented")
         raise Exception
     data = {}
-    recursive_read(data, "data", require = [0], reject = ["titanium", "iron"])
-    energies = get_energies(data)
+    recursive_read(data, "data", require = [0], reject = ['iron', 'titanium'], condition = lambda metadata : metadata[0] == 'empty' or metadata[0] == foil)
+    energies, e_map = get_energies(data, verbose = False, channel_map = True)
     xs, Es = thiccness_dx(foil, energies['empty'].val, energies[foil].val, c_a[foil].val, c_b[foil].val, dx = 1e-6)
-    squares = np.array(Es)**2
+    E2_x = []
+    E2_base = [e_map(ch)**2 for ch in range(2048 + 1000)]
+    if use_moyal:
+        for x in xs:
+            moyal_pdf = moyal_convolution_pdf(data[('empty', 0, 1)][1], x)
+            E2_x.append(np.dot(E2_base, moyal_pdf))
+    else:
+        E2_x = np.array(Es)**2
+    #squares = np.array(Es)**2
     pdf = [poly_x(i+1, Es, p) for i in range(len(xs))]
-    E = np.dot(pdf, squares) / np.sum(pdf)
-    var = np.dot(pdf, squares**2) / np.sum(pdf) - E**2
+    
+    #for x in xs:
+    #    print (moyal_convolution_pdf(data[('empty', 0, 1)][1], x))
+    E = np.dot(pdf, E2_x) / np.sum(pdf)
+    var = np.dot(pdf, np.array(E2_x)**2) / np.sum(pdf) - E**2
     E.stat = (var **(1/2)).val
     #plt.plot(xs, [px.val for px in pdf])
     #plt.axvline(E.val)
@@ -118,7 +129,7 @@ def expected_E_inverse_square(foil):
         print ("Iron is unimplemented")
         raise Exception
     data = {}
-    recursive_read(data, "data", require = [0], reject = ["titanium", "iron"])
+    recursive_read(data, "data", require = [0], condition = lambda metadata : metadata[0] == 'empty' or metadata[0] == 'foil')
     energies = get_energies(data)
     xs, Es = thiccness_dx(foil, energies['empty'].val, energies[foil].val, c_a[foil].val, c_b[foil].val, dx = 1e-6)
     inverse_square = 1/np.array(Es)**2
@@ -239,7 +250,7 @@ def thiccness_dx(foil, incident, exiting, c_a, c_b, dx = None):
 
 ### ENERGY STUFF ###
 
-def get_energies(data, verbose = False, plot = False):
+def get_energies(data, verbose = False, plot = False, channel_map = False):
 
     channels = {}
     for (foil, angle, iteration), entry in data.items():
@@ -253,6 +264,8 @@ def get_energies(data, verbose = False, plot = False):
         energies[foil] = e(channel) if foil != "empty" else e_empty
         if verbose:
             report(foil + " energy", energies[foil], "MeV")
+    if channel_map:
+        return energies, e
     return energies
 
 def get_thickness(energies, verbose = False):
@@ -453,7 +466,12 @@ def poly_plot_test(dx = 1e-5):
 
 if __name__ == '__main__':
     for foil in ('gold', '2gold', '4gold'):
-        print (expected_E_inverse_square(foil))
+        print ("Foil:", foil)
+        print ("With moyals:")
+        print (expected_E_square(foil))
+        print ("Without:")
+        print (expected_E_square(foil, use_moyal = False))
+        print ("-")
 #if __name__ == '__main__':
 #    calculate_p()
     #poly_plot_test(dx = 1e-8)

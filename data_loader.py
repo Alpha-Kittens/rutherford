@@ -123,7 +123,7 @@ def recursive_read(data, folder, require = [], reject = [], condition = lambda x
         else:
             #print (entry)
             #print (folder)
-            recursive_read(data, path, require = require, reject = reject) # for some reason, os.path.join isn't doing what I expect
+            recursive_read(data, path, require = require, reject = reject, condition = condition) # for some reason, os.path.join isn't doing what I expect
 
 import numpy as np
 

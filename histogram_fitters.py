@@ -6,6 +6,14 @@ from scipy.stats import moyal
 from data_processing import *
 
 
+#### Fit results ####
+a_loc = Result(-1031375.697618693, stat = 26240.65526430214)
+b_loc = Result(1507.6611799242887, stat = 6.86358751455451)
+a_scale = Result(55233.98556503942, stat = 391.05899088989685)
+b_scale = Result(0.981144735446772, stat = 0.09993857071754861)
+
+loc = lambda x : a_loc * x + b_loc
+scale = lambda x : a_loc * x + b_loc
 """
 def convolve(x,f1,f2,iMin=-10,iMax=10,iN=2000):
     convolution = []
@@ -319,6 +327,23 @@ def fitting_moyals(plot = False):
     for foil in foils:
         thicknii.append(thicknesses[foil])
     thickx, thickxerr = plotting_unpack(thicknii)
+    linear = lambda x, a, b : a*x + b
+    test_thickx = np.linspace(min(thickx) - min(thickx) / 2, max(thickx) + min(thickx) / 2, 100)
+    
+    model = lmfit.Model(linear)
+    slope = lambda yarr, xarr : (yarr[1] - yarr[0]) / (xarr[1] - xarr[0])
+    adjusted_lyerr = np.sqrt([lyerr[i]**2 * (slope(ly, thickx) * thickxerr[i])**2 for i in range(len(ly))])
+    adjusted_syerr = np.sqrt([syerr[i]**2 * (slope(sy, thickx) * thickxerr[i])**2 for i in range(len(sy))])
+    loc_result = model.fit(ly, a = -10000, b = 0, x=thickx, weights = 1/adjusted_lyerr)
+    scale_result = model.fit(sy, a = 1, b = 0, x=thickx, weights = 1/adjusted_syerr)
+    print ("Loc")
+    print (loc_result.params['a'].value, loc_result.params['a'].stderr)
+    print (loc_result.params['b'].value, loc_result.params['b'].stderr)
+    print (loc_result.redchi)
+    print ("Scale")
+    print (scale_result.params['a'].value, scale_result.params['a'].stderr)
+    print (scale_result.params['b'].value, scale_result.params['b'].stderr)
+    print (scale_result.redchi)
     if plot:
         for i, foil in enumerate(foils):
             plt.plot(xs[i], ys[i], label = foil)
@@ -327,35 +352,31 @@ def fitting_moyals(plot = False):
         plt.title("Locations")
         plt.xlabel("Foil Thickness (cm)")
         plt.ylabel("'Loc' of moyal for convolution")
-        plt.errorbar(thickx, ly, yerr = lyerr, ls = 'none', marker = 'o')
+        plt.errorbar(thickx, ly, yerr = lyerr, xerr = thickxerr, ls = 'none', marker = 'o', label = "data")
+        plt.plot(test_thickx, linear(test_thickx, a_loc.val, b_loc.val), label = "linear fit. Redchi: %.3f" % loc_result.redchi)
+        plt.legend()
         plt.show()
         plt.title("Scales")
-        plt.title("Locations")
         plt.xlabel("Foil Thickness (cm)")
         plt.ylabel("'Scale' of moyal for convolution")
-        plt.errorbar(thickx, sy, yerr = syerr, ls = 'none', marker = 'o')
+        plt.errorbar(thickx, sy, yerr = syerr, xerr = thickxerr, ls = 'none', marker = 'o', label = "data")
+        plt.plot(test_thickx, linear(test_thickx, a_scale.val, b_scale.val), label = "linear fit. Redchi: %.3f" % scale_result.redchi)
+        plt.legend()
         plt.show()
-    linear = lambda x, a, b : a*x + b
-    model = lmfit.Model(linear)
-    slope = lambda yarr, xarr : (yarr[1] - yarr[0]) / (xarr[1] - xarr[0])
-    loc_result = model.fit(ly, x=thickx, weights = 1/np.sqrt([lyerr[i]**2 * (slope(ly, thickx) * thickxerr[i])**2 for i in range(len(ly))]))
-    scale_result = model.fit(sy, x=thickx, weights = 1/np.sqrt([syerr[i]**2 * (slope(sy, thickx) * thickxerr[i])**2 for i in range(len(sy))]))
-    print ("Loc")
-    print (loc_result.params['a'].value, loc_result.params['a'].stderr)
-    print (loc_result.params['b'].value, loc_result.params['b'].stderr)
-    print ("Scale")
-    print (scale_result.params['a'].value, scale_result.params['a'].stderr)
-    print (scale_result.params['b'].value, scale_result.params['b'].stderr)
     
 
 
     
     
     
-def moyal_convolution(ihistogram, loc, scale, padding = [0] * 1000):
-    pass
+def moyal_convolution_pdf(ihistogram, x, padding = [0] * 1000):
+    convolution_histogram = (ihistogram + padding) / np.sum(ihistogram)
+    moyal_domain = np.array(range(len(convolution_histogram)))
+    return np.convolve(convolution_histogram, moyal.pdf(moyal_domain, loc = loc(x).val, scale = scale(x).val), mode = 'same')
+
 if __name__ == '__main__':
-    fitting_moyals()
+    pass
+    #fitting_moyals(plot = True)
     
     """x = np.array(range(2048))
     # x = np.arange(0, 2047, 1)
