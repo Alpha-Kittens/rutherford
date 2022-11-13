@@ -254,7 +254,8 @@ def optimal_energy_fit(histogram):
     for const in (False, True):
         for soft in (False, True):
             if (const, soft) != (False, True):
-                results[(const, soft)] = (result:= fit_histogram(histogram, const = const, soft = soft))
+                result = fit_histogram(histogram, const = const, soft = soft)
+                results[(const, soft)] = result
                 if not soft and result.params['xbar'].stderr is not None and (minchi == 0 or result.redchi < minchi): # do not accept soft cutoff as estimate
                     minresult = result
                     minchi = result.redchi
@@ -274,7 +275,8 @@ def optimal_function_fit(histogram):
     for const in (False, True):
         for soft in (False, True):
             if (const, soft) != (False, True):
-                results[(const, soft)] = (result:= fit_histogram(histogram, const = const, soft = soft))
+                result = fit_histogram(histogram, const = const, soft = soft)
+                results[(const, soft)] = result
                 if (minchi == 0 or result.redchi < minchi): # now, just seek a best fit for convolution purposes or whatever
                     minresult = (const, soft)
                     minchi = result.redchi
@@ -336,8 +338,8 @@ def fitting_moyals(plot = False):
     linear = lambda x, a, b : a*x + b
     model = lmfit.Model(linear)
     slope = lambda yarr, xarr : (yarr[1] - yarr[0]) / (xarr[1] - xarr[0])
-    loc_result = model.fit(ly, x=thickx, weights = 1/np.sqrt([lyerr[i]**2 * (slope(ly, thicknii) * thickxerr[i])**2]))
-    scale_result = model.fit(sy, x=thickx, weights = 1/np.sqrt([syerr[i]**2 * (slope(sy, thicknii) * thickxerr[i])**2]))
+    loc_result = model.fit(ly, x=thickx, weights = 1/np.sqrt([lyerr[i]**2 * (slope(ly, thickx) * thickxerr[i])**2 for i in range(len(ly))]))
+    scale_result = model.fit(sy, x=thickx, weights = 1/np.sqrt([syerr[i]**2 * (slope(sy, thickx) * thickxerr[i])**2 for i in range(len(sy))]))
     print ("Loc")
     print (loc_result.params['a'].value, loc_result.params['a'].stderr)
     print (loc_result.params['b'].value, loc_result.params['b'].stderr)
@@ -353,7 +355,7 @@ def fitting_moyals(plot = False):
 def moyal_convolution(ihistogram, loc, scale, padding = [0] * 1000):
     pass
 if __name__ == '__main__':
-
+    fitting_moyals()
     
     """x = np.array(range(2048))
     # x = np.arange(0, 2047, 1)
