@@ -14,13 +14,14 @@ plt.style.use('seaborn-colorblind')
 folder = 'beam_profile/'
 files = os.listdir(folder)
 
-view_data = False
+view_data = True
 
 angles = []
 cpss = []
 errors = []
 counts = []
 omitted_data = []
+cutoffs = []
 
 for file_name in files:
     fp = folder + file_name
@@ -34,11 +35,26 @@ for file_name in files:
     histogram = information['histogram']
 
     # Viewing all data (if desired)
+    '''
     if view_data == True:
         plot_histogram(['empty', angle], histogram)
 
+    cutoff = float(input("What is the cutoff?"))
+
+    total_omitted_counts = 0
+
+    for i in range(len(histogram)):
+        if i<cutoff:
+            total_omitted_counts += histogram[i]
+            histogram[i] = 0
+    
+    plot_histogram(['empty', angle], histogram)
+
+    cps = cps - total_omitted_counts
+    '''
     
     # Omitting data
+    '''
     if cps > 0.5:
         error = math.sqrt(cps)/math.sqrt(time)
         angles.append(angle)
@@ -47,6 +63,17 @@ for file_name in files:
         counts.append(count)
     else:
         omitted_data.append(information)
+    '''
+    if cps > 0:
+        error = math.sqrt(cps)/math.sqrt(time)
+    else:
+        error = 0
+    angles.append(angle)
+    cpss.append(cps)
+    errors.append(error)
+    counts.append(count)
+    #cutoffs.append(cutoff)
+print(cutoffs)
     
 
 def plot_profile_data(x = angles, y = cpss, yerr = errors, xerr = 0.5, emoji=':O', show=False):
@@ -69,7 +96,11 @@ def plot_frac_uncertainties(emoji=':O'):
     '''
     frac_unc = []
     for i in range(len(errors)):
-        frac_unc.append(errors[i]/cpss[i])
+        if cpss[i] > 0:
+            frac_unc.append(errors[i]/cpss[i])
+        else:
+            frac_unc.append(0)
+
 
     plt.errorbar(angles, np.array(frac_unc), marker='o', ls='none')
     plt.xlabel('angle')
@@ -150,12 +181,19 @@ def triangle_fit(x, y, report=False, show=False, initial_plot = False):
     model = lmfit.Model(triangle_model)
 
     result = model.fit(y, x=x)
+
+    params = result.params
+    init_params = result.init_params
+
+    areaL = abs(0.5 * ((params['y0']/params['aL']) + params['x0'])*params['y0'])
+    areaR = abs(0.5 * ((params['y0']/params['aR']) + params['x0'])*params['y0'])
+
+    total_area = areaL+ areaR
+
     
     if report:
         plt.scatter(x, y, label='data')
-        params = result.params
-        init_params = result.init_params
-
+    
         x_vals=np.linspace(min(x), max(x), 1000)
         y_eval=[]
 
@@ -173,11 +211,15 @@ def triangle_fit(x, y, report=False, show=False, initial_plot = False):
         plt.ylabel('CPS')
         plt.xlabel('Angle (degrees)')
 
+        
 
         if show:
             plt.legend()
             plt.show()
-    return lambda x : triangle_model(x, params['aL'].value, params['aR'].value, params['x0'].value, params['y0'].value)
+
+
+    print(total_area)
+    return lambda x : (1/(total_area)) * np.array(triangle_model(x, params['aL'].value, params['aR'].value, params['x0'].value, params['y0'].value))
 
 
 def generate_data_sets(total = 10, view=True):
