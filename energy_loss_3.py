@@ -67,21 +67,23 @@ consts = { # jackson + mccarthy with chi squred is 2.
 }
 
 c_a = {
-    'gold' : Result(0.344490747, sys = 0.01103380),
-    '2gold' : Result(0.344490747, sys = 0.01103380),
-    '4gold' : Result(0.344490747, sys = 0.01103380),
+    'gold' : Result(0.3310636, sys = 0.00793844),
+    '2gold' : Result(0.3310636, sys = 0.00793844),
+    '4gold' : Result(0.3310636, sys = 0.00793844),
     #'iron' : Result(0.344490747, sys = 0.01103380) unimplemented
 }
 c_b = {
-    'gold' : Result(0.16126968, sys = 0.00599135),
-    '2gold' : Result(0.16126968, sys = 0.00599135),
-    '4gold' : Result(0.16126968, sys = 0.00599135)
+    'gold' : Result(0.15372616, sys = 0.00397555),
+    '2gold' : Result(0.15372616, sys = 0.00397555),
+    '4gold' : Result(0.15372616, sys = 0.00397555)
 }
 
 
-p = Result(0.09742704033851624, stat = 0.002604316920042038, sys = 0.0024188943207263947)
+#p = Result(0.09742704033851624, stat = 0.002604316920042038, sys = 0.0024188943207263947)
                                                                 # error is actually total. "sys" used for asymmetric evaluate
-N = Result(0.8846554831893968, stat= 0.002250923948972613)
+#N = Result(0.8846554831893968, stat= 0.002250923948972613)
+
+p = Result(0.0870)
 
 e_empty = Result((5.486 * 0.86 + 5.443 * 0.127 + 5.391 * 0.014) / (0.86 + 0.127 + 0.014))
 c = 299792458 # m/s
@@ -100,28 +102,37 @@ def expected_E_square(foil, use_moyal = False, simplistic = False):
     if simplistic:
         return Result(energies['empty'].val**2, stat = (energies['empty'] - energies[foil]).val)
     xs, Es = thiccness_dx(foil, energies['empty'].val, energies[foil].val, c_a[foil].val, c_b[foil].val, dx = 1e-6)
+    print (Es[0])
     E2_x = []
-    E2_base = [e_map(ch)**2 for ch in range(2048 + 1000)]
+    E2_base = [Result(0)]*120 + [e_map(ch+120)**-2 for ch in range(2048 + 1000 - 120)]
+    #print (E2_base[-1])
+    #print (E2_base[5])
+    #print (E2_base)
     if use_moyal:
         for x in xs:
             moyal_pdf = moyal_convolution_pdf(data[('empty', 0, 1)][1], x)
+            #print (np.sum(moyal_pdf))
             E2_x.append(np.dot(E2_base, moyal_pdf))
+            #print (E2_x[-1])
     else:
         E2_x = np.array(Es)**2
     #squares = np.array(Es)**2
     pdf = [poly_x(i+1, Es, p.val) for i in range(len(xs))]
-    plt.title("pdf of scattering occuring at any point in gold foil")
-    plt.plot(xs, np.array(pdf) / np.sum(pdf), label = "Scattering pdf", color = 'blue')
-    plt.ylim(0, 1.2*max(pdf)/ np.sum(pdf))
-    plt.xlabel("x")
-    plt.ylabel("Probability of scattering")
-    plt.show()
+    print (np.sum(pdf))
+    #plt.title("pdf of scattering occuring at any point in gold foil")
+    #plt.plot(xs, np.array(pdf) / np.sum(pdf), label = "Scattering pdf", color = 'blue')
+    ##plt.ylim(0, 1.2*max(pdf)/ np.sum(pdf))
+    #plt.xlabel("x")
+    #plt.ylabel("Probability of scattering")
+    #plt.show()
     
     #for x in xs:
     #    print (moyal_convolution_pdf(data[('empty', 0, 1)][1], x))
-    E = np.dot(pdf, E2_x) / np.sum(pdf)
-    var = np.dot(pdf, np.array(E2_x)**2) / np.sum(pdf) - E**2
-    E.stat = (var **(1/2)).val
+    #print (E2_x)
+    E = np.dot(E2_x, pdf) / np.sum(pdf)
+    var = np.dot(np.array(E2_x)**2, pdf) / np.sum(pdf) - E**2
+    print (E)
+    print (var)
     #plt.plot(xs, [px.val for px in pdf])
     #plt.axvline(E.val)
     #plt.show()
@@ -130,7 +141,7 @@ def expected_E_square(foil, use_moyal = False, simplistic = False):
     #print ("exiting E:", energies[foil])
     #print ("Expected E:", np.dot(pdf, Es)/np.sum(pdf))
     
-    return E
+    return Result(E, stat = var.val**(1/2))
 
 
 def expected_E_inverse_square(foil):
@@ -429,6 +440,7 @@ def calculate_p():
             if foil1 != foil2:
                 print (foil1, foil2, ps[foil1]/ps[foil2])
     energies = get_energies(data, verbose = False)
+    thicknii = get_thickness(energies)
     p_tot = None
     E1 = {}
     p1 = {}
@@ -539,8 +551,8 @@ def poly_plot_test(dx = 1e-5):
 
 
 if __name__ == '__main__':
-    #expected_E_square('4gold')
-    calculate_p()
+    expected_E_square('gold', use_moyal = True)
+    #calculate_p()
     #data = read_gold_data()
     #energies = get_energies(data)
     #thickness = get_thickness(energies, verbose = True)

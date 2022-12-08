@@ -28,12 +28,10 @@ def convolve(x,f1,f2,iMin=-10,iMax=10,iN=2000):
         convolution.append(pInt)
     return convolution"""
 
-loc_quadratic = lambda x : -400825937.7634321*x**2 + -1070175.2906392978*x + 1519.0544474418773
+loc_quadratic = lambda x : -342518953.9609103*x**2 + -1116484.5605326646*x + 1526.356081390396
 scale_quadratic = lambda x : 115775685.27995577*x**2 + 6377.829708029055*x + 14.703687598788186
 
-scale_linear = lambda x : 92983.39595236957*x + 1.9293997927322772
-
-loc_quadratic = lambda x : -342518953.9609103*x**2 + -1116484.5605326646*x + 1526.356081390396
+loc_quadratic = lambda x : -400825937.7634321*x**2 + -1070175.2906392978*x + 1519.0544474418773
 scale_quadratic = lambda x : 115775685.27995577*x**2 + 6377.829708029055*x + 14.703687598788186
 
 nmoyal = lambda x, loc, scale : moyal.pdf(-x, -loc, scale)
@@ -45,33 +43,35 @@ def make_predictive_plot():
     recursive_read(data, "data", require = [0], reject = ['titanium'])    
     ihistogram = data[('empty', 0, 1)][1] + padding
     ch = np.array(range(len(ihistogram)))
-    x = np.linspace(0, 0.0006, 51)
-    xs = []
+    x = np.linspace(0, 0.0006, 12)
     Es = []
     mus = []
     plt.plot(ch, ihistogram/np.sum(ihistogram), label = "initial")
     f_histogram = optimal_function_fit(ihistogram)
+    plt.plot(ch, f_histogram(ch))
+    plt.show()
+    from energy_loss_3 import get_energies
+    #get_energies(data)
     for xi in x:
-        try:
-            fhistogram = moyal_convolution_2(ch, f_histogram, loc_quadratic(xi), scale_linear(xi))
+        print (xi)
+        #if xi != x[2]:
+        if True:
+            print (xi)
+            fhistogram = moyal_convolution_2(ch, f_histogram, loc_quadratic(xi), scale_quadratic(xi))
             plt.plot(ch, fhistogram/np.sum(fhistogram), label = "final")
             plt.title("x = "+str(xi))
             plt.legend()
             #plt.show()
-            Ei = optimal_energy_fit(fhistogram * 3000)
-            xs.append(xi)
+            Ei = optimal_energy_fit(fhistogram * np.sum(ihistogram), plot = False)
             mus.append(np.dot(fhistogram, ch))
             print (Ei)
             Es.append(Ei.val)
-        except:
-            pass
-
     plt.show()
-    print (xs)
+    print (x)
     print (Es)
     print ("mus")
     print (mus)
-    plt.plot(xs, Es, ls = 'none', marker = 'o')
+    plt.plot(x, Es, ls = 'none', marker = 'o')
     plt.xlabel("x position")
     plt.ylabel("Fitted crystal ball mean of moyal prediction")
     plt.show()
@@ -162,7 +162,7 @@ def fit_moyal_convolution(ihistogram, fhistogram, plot = False, foil = None, inc
         #plt.show()
     result = model.fit(nfhistogram / np.sum(nfhistogram), x = x, params = params, weights = np.sum(nfhistogram) / np.where(nfhistogram > 0, np.sqrt(nfhistogram), 1e5))
     #result = model.fit(nfhistogram / np.sum(nfhistogram), x = x, params = params, weights = np.sum(nfhistogram) / np.where(nfhistogram > 0, np.sqrt(nfhistogram), 1))
-    #print(lmfit.fit_report(result))
+    print(lmfit.fit_report(result))
     rfunc = r_moyal_convolution(f_histogram, result)
     if plot:
         plt.errorbar(x, ihistogram/np.sum(ihistogram), yerr = np.sqrt(ihistogram) / np.sum(ihistogram), color = 'r', label = "Initial histogram", ls = 'none')
@@ -194,6 +194,14 @@ def crystal_ball(x, α, n, xbar, σ):
     return np.where((x - xbar)/σ > -α, np.exp(-(x - xbar)**2/(2*σ**2)), A(n, α) * (B(n, α) - (x - xbar)/σ) ** -n)
     
 def normalized_crystal_ball(x, α, n, xbar, σ):
+    #print (α, n, xbar, σ, "-", sep = '\n')
+    if False:
+    #if xbar <= 1400:
+        plt.plot(x, N(n, α, σ) * crystal_ball(x, α, n, xbar, σ))
+        plt.show()
+    if True in np.isnan(crystal_ball(x, α, n, xbar, σ)):
+        plt.plot(x, N(n, α, σ) * crystal_ball(x, α, n, xbar, σ))
+        plt.show()
     return N(n, α, σ) * crystal_ball(x, α, n, xbar, σ)
 
 def ncb_plus_const(x, α, n, xbar, σ, c):
@@ -229,9 +237,9 @@ def crystal_ball_params(x, y):
     σ = (xmax - xmin) / 2 / np.sqrt(2 * np.log(2)) # sigma from hwhm
     params = lmfit.Parameters()
     params.add('xbar', value = xbar, min = xmin, max = xmax)
-    params.add('α', value = α, min = 1e-8)
+    params.add('α', value = α, min = 1e-8, max = 50)
     params.add('n', value = n, min = 1 + 1e-8, max = 50)
-    params.add('σ', value = σ, min = 1e-8)
+    params.add('σ', value = σ, min = 1e-8, max = 200)
     return params
 
 def result_ball(params):
@@ -247,14 +255,20 @@ def fit_histogram(histogram, const = False, soft = False, plot = False, plot_ini
 
     npch = np.array(range(len(histogram)))
     nphist = np.array(histogram)
+    print (nphist)
     errs = np.sqrt(histogram)
     nonzero = nphist > 0
     x = npch[nonzero]
     y = nphist[nonzero] / np.sum(nphist)
-    weights = 1/(errs / np.sum(nphist))[nonzero]
+    print (len(x))
+    print (len(y))
+    weights = 1/(errs[nonzero] / np.sum(nphist))
+    print (x)
+    print (y)
+    print (weights)
     params = crystal_ball_params(x, y)
     if const:
-        params.add('c', value = min(y), min = 0, max = 50 / np.sum(histogram))
+        params.add('c', value = min(y[x < params['xbar'].value]), min = 0, max = 50 / np.sum(histogram))
         if soft:
             params.add('z_cutoff', value = -1, min = -5, max = 5)
             model = lmfit.Model(ncb_plus_soft_const)
@@ -263,17 +277,21 @@ def fit_histogram(histogram, const = False, soft = False, plot = False, plot_ini
     else:
         model = lmfit.Model(normalized_crystal_ball)
     if plot_initial:
-        plt.errorbar(x, y, yerr = 1/weights, color = 'b', label = "Normalized energy channel histogram", ls = 'none', marker = '.')
+        plt.errorbar(x, y, yerr = 1/weights, color = 'b', label = "Normalized energy channel histogram", marker = '.')#, ls = 'none')
         plt.plot(npch, result_ball(params)(npch), color = 'r', label = "Normalized crystal ball guess")
+        plt.title("dat boi")
+        
         plt.axvline(x = params['xbar'].value, label = "Mean", color = 'red', ls = '--')
         if foil is not None:
             plt.title("Initial guess for "+foil)
         plt.xlabel("Channel #")
         plt.ylabel("Normalized counts")
+        plt.legend()
         plt.show()
 
     result = model.fit(y, x = x, params = params, weights = weights)
-
+    if plot_initial:
+        print(lmfit.fit_report(result))
     #print (lmfit.fit_report(result))
     
     if plot:
@@ -315,7 +333,8 @@ def optimal_energy_fit(histogram, plot = False):
     for const in (False, True):
         for soft in (False, True):
             if (const, soft) != (False, True):
-                result = fit_histogram(histogram, const = const, soft = soft, plot = plot)
+                print (const, soft)
+                result = fit_histogram(histogram, const = const, soft = soft, plot = plot, plot_initial = plot)
                 results[(const, soft)] = result
                 if not soft and result.params['xbar'].stderr is not None and (minchi == 0 or result.redchi < minchi): # do not accept soft cutoff as estimate
                     minresult = result
@@ -340,6 +359,7 @@ def optimal_function_fit(histogram):
     for const in (False, True):
         for soft in (False, True):
             if (const, soft) != (False, True):
+                print (const, soft)
                 result = fit_histogram(histogram, const = const, soft = soft)
                 results[(const, soft)] = result
                 if (minchi == 0 or result.redchi < minchi): # now, just seek a best fit for convolution purposes or whatever
@@ -433,9 +453,9 @@ def fitting_moyals(plot = False, do_quadratic = False):
         plt.ylabel("'Loc' of moyal for convolution")
         plt.errorbar(thickx, ly, yerr = lyerr, xerr = thickxerr, ls = 'none', marker = 'o', label = "data")
         if do_quadratic:
-            plt.plot(test_thickx, quadratic(test_thickx, a_loc, b_loc, c_loc), label = "Quadratic fit. Reduced χ² = %.3f" % loc_result.redchi)
+            plt.plot(test_thickx, quadratic(test_thickx, a_loc, b_loc, c_loc), label = "Quadratic fit. Redchi: %.3f" % loc_result.redchi)
         else:
-            plt.plot(test_thickx, linear(test_thickx, a_loc, b_loc), label = "Linear fit. Reduced χ² = %.3f" % loc_result.redchi)
+            plt.plot(test_thickx, linear(test_thickx, a_loc, b_loc), label = "linear fit. Redchi: %.3f" % loc_result.redchi)
         plt.legend()
         plt.savefig(("Quadratic" if do_quadratic else "Linear") + "fit_for_Location.png")
         plt.show()
@@ -444,9 +464,9 @@ def fitting_moyals(plot = False, do_quadratic = False):
         plt.ylabel("'Scale' of moyal for convolution")
         plt.errorbar(thickx, sy, yerr = syerr, xerr = thickxerr, ls = 'none', marker = 'o', label = "data")
         if do_quadratic:
-            plt.plot(test_thickx, quadratic(test_thickx, a_scale, b_scale, c_scale), label = "Quadratic fit. Reduced χ² = %.3f" % scale_result.redchi)
+            plt.plot(test_thickx, quadratic(test_thickx, a_scale, b_scale, c_scale), label = "Quadratic fit. Redchi: %.3f" % scale_result.redchi)
         else:
-            plt.plot(test_thickx, linear(test_thickx, a_scale, b_scale), label = "Linear fit. Reduced χ² = %.3f" % scale_result.redchi)
+            plt.plot(test_thickx, linear(test_thickx, a_scale, b_scale), label = "linear fit. Redchi: %.3f" % scale_result.redchi)
         plt.legend()
         plt.savefig(("Quadratic" if do_quadratic else "Linear") + "fit_for_Scale.png")
         plt.show()
@@ -459,8 +479,7 @@ def fitting_moyals(plot = False, do_quadratic = False):
 def moyal_convolution_pdf(ihistogram, x, padding = [0] * 1000):
     convolution_histogram = (ihistogram + padding) / np.sum(ihistogram)
     moyal_domain = np.array(range(len(convolution_histogram)))
-    conv = np.convolve(convolution_histogram, moyal.pdf(moyal_domain, loc = loc_quadratic(x), scale = scale_linear(x)), mode = 'same')
-    return conv / np.sum(conv)
+    return np.convolve(convolution_histogram, moyal.pdf(moyal_domain, loc = loc_quadratic(x).val, scale = scale_quadratic(x).val), mode = 'same')
 
 def plot_inverted_moyal(x, loc = 0, scale = 1):
     y = moyal.pdf(-x, loc = loc, scale = scale)
