@@ -31,18 +31,13 @@ def convolve(f, fdomain, g, gdomain):
     a = math.floor((len(M)-1) / 2) #3: a=b=1. 4: a=1,b=2
     b = math.ceil((len(M)-1) / 2)
 
+
     step_size = fdomain[1] - fdomain[0]
 
 
-
-    normalization_factor = sum(g(gdomain))
     c = np.convolve(f(fdomain), g(gdomain))[len(M):len(N)+1]
 
 
-
-    normalization = step_size * sum(c) / sum(f(fdomain))
-
-    print(normalization)
 
     return c, 1/2 * (N[a:-b] + N[b:-a])
 

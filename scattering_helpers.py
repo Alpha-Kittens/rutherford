@@ -7,10 +7,10 @@ import numpy as np
 import math
 from energy_loss import element_map
 from beam_profile_models import beam_profile_fit
-from profile import profile as beam_profile
-from plots import plot_histogram
+#from profile import profile as beam_profile
+from plots import plot_histogram, rebin_hist
 import lmfit
-
+from histogram_fitters import fit_histogram
 
 
 
@@ -59,7 +59,7 @@ def plotting_unpack(results, mode = 'tot'):
             xerr.append(result.sys)
     return x, xerr
 
-
+'''
 def scattering(element, min_angle, folder, emoji = ":P"):
     """
     Compares 1/sin^4(theta/2) angular dependence with Plum Pudding model. 
@@ -141,6 +141,7 @@ if __name__ == '__main__':
     min_angle = 8
     folder = 'gold_scattering/'
     scattering(element, min_angle, folder)
+'''
 
 
 '''
@@ -159,7 +160,7 @@ DATA METHODS
 '''
 '''
 '''
-def get_scattering_data(element, min_angle, folder, plot=True, emoji = ":P", show=True, viewHist = False):
+def get_scattering_data(element, min_angle, folder, plot=True, emoji = ":P", show=True, viewHist = False, magnify_errors = 1):
     '''
     gets the scattering data from a selected folder, and a given element
     '''
@@ -177,25 +178,38 @@ def get_scattering_data(element, min_angle, folder, plot=True, emoji = ":P", sho
     
     cps_raw = []
     cps_raw_new = []
+    background_error = []
     angle_raw = []
     for metadata, entry in data.items():
         scattering_unpack(cps_raw, angle_raw, metadata, entry)
         time = entry[0]
+
+        histogram = entry[1]
+        new_bins, new_hist = rebin_hist(histogram)
         if viewHist:
-            histogram = entry[1]
-            plot_histogram(['gold', angle_raw[len(angle_raw) - 1]], histogram)
+            plot_histogram('gold ' + str(angle_raw[len(angle_raw) - 1]), histogram)
+            plot_histogram('gold ' + str(angle_raw[len(angle_raw) - 1]), new_hist, xaxis = new_bins)
 
-            total_omitted_counts = 0
-            cutoff = float(input('What is the cutoff: '))
-            for i in range(len(histogram)):
-                if i<cutoff:
-                    total_omitted_counts += histogram[i]
-                    histogram[i] = 0
-            
-            plot_histogram(['gold', angle_raw[len(angle_raw) - 1]], histogram)
-            omitted[metadata[1]] = total_omitted_counts/time
 
-        cps_raw_new.append(cps_raw[len(cps_raw) - 1] - omitted[metadata[1]])
+        crystal_ball = fit_histogram(new_hist, plot=True)
+
+        print(crystal_ball.params)
+        print('red chi: ' + str(crystal_ball.redchi))
+
+        total_omitted_counts = 0
+        cutoff = 750
+        for i in range(len(histogram)):
+            if i<cutoff:
+                total_omitted_counts += histogram[i]
+                histogram[i] = 0
+        '''
+        if viewHist:
+            plot_histogram(['gold', angle_raw[len(angle_raw) - 1]], histogram)
+        '''
+        omitted[metadata[1]] = total_omitted_counts/time
+
+        #cps_raw_new.append(cps_raw[len(cps_raw) - 1] - (omitted[metadata[1]]/2))
+        background_error.append(omitted[metadata[1]]/2)
 
 
     print(omitted)
@@ -204,15 +218,50 @@ def get_scattering_data(element, min_angle, folder, plot=True, emoji = ":P", sho
     cps, cps_err = plotting_unpack(cps_raw)
     cps_new,cps_new_err = plotting_unpack(cps_raw_new)
 
+    total_error = []
+    for i in range(len(background_error)):
+        total_error.append(math.sqrt(background_error[i] **2 + cps_new_err[i]**2))
 
-    data = [angle, cps, angle_err, cps_err]
-    data_new = [angle, cps_new, angle_err, cps_new_err]
+    print(total_error)
+
+    data = [angle, cps, 0, 0]
+    data_new = [angle, cps_new, 0, background_error]
+    data_black = [angle, cps_new, total_error, 0]
+    data_with_background = [angle, cps_new, angle_err, total_error]
+
+    print("Angle: ")
+    print(angle)
+    print("CPS")
+    print(cps_new)
+    print("Background Error: ")
+    print(background_error)
+    print("Possion Error: ")
+    print(cps_new_err)
+
+    background_error_big = []
+    total_error_big = []
+
+    '''
+    for i in background_error:
+        background_error_big.append(i*5)
+    for i in total_error:
+        total_error_big.append(i*5)
+    
+    mag_background_data = [angle, cps_new, angle_err, total_error_big]
+    mag_new_data = [angle, cps_new, 0, background_error_big]
+    '''
+
 
     if plot:
-        plot_data(data, show=False, title = element + " scattering " + emoji, mode='raw', color='blue')
-        plot_data(data_new, show=show, title = element + " scattering " + emoji, mode='raw')
+        plt.text(25, 1e-3, 'Errors in CPS displayed 5 times \nlarger than true value')
+        plot_data(data_with_background, show=False, mode='raw', color='b', label='total error')
+        plot_data(data_new, show=show, mode='raw', color='orange', label='background error')
+        #plot_data(data_black, show=show, title = element + " scattering " + emoji, mode='raw', color='black', label='new data')
 
-    return data_new
+        #plot_data(data, show=show, title = element + " scattering " + emoji, mode='raw', color='red', label='original data')
+
+
+    return data_with_background
 
 def plot_data(data, show=True, title = None, mode='processed', color='black', label = None):
     '''
@@ -227,6 +276,7 @@ def plot_data(data, show=True, title = None, mode='processed', color='black', la
 
     if label is not None:
         plt.errorbar(x, y, xerr = xerr, yerr = yerr, marker = '.', ls = 'none', color = color, label=label)
+        plt.legend()
     else:
         plt.errorbar(x, y, xerr = xerr, yerr = yerr, marker = '.', ls = 'none', color = color)
     plt.xlabel("Angle (degrees)")
@@ -255,17 +305,40 @@ def process_scattering_data(profile, data, plot=False):
     from energy_loss_2 import expected_E_square
 
     # Energy Uncertainties
+    
     E = expected_E_square('gold')
     Evalue = E.val
     Eerror = math.sqrt(E.sys **2 + E.stat **2)
+    
+    print("old: " + str(Eerror/Evalue))
+
+    Evalue = 25.8435
+    Eerror = math.sqrt(4.4640)
     newy = Evalue * np.array(y)
 
+
+    yerr_rescaled = Evalue * np.array(yerr)
+
+    print("old: " + str(Eerror/Evalue))
+
+    energy_error = []
+    for i in y:
+        energy_error.append(i*Eerror)
+    
+    print('EnergyError: ')
+    print(energy_error)
+
     newyerr = []
-    for i in range(len(yerr)):
-        new_err = math.sqrt(yerr[i]**2 + (y[i]*Eerror)**2)
+    for i in range(len(yerr_rescaled)):
+        new_err = math.sqrt(yerr_rescaled[i]**2 + (energy_error[i])**2)
         newyerr.append(new_err)
 
     data_new = [x, newy, xerr, newyerr]
+
+    print('Angle: ')
+    print(x)
+    print('CPS * Energy^2: ')
+    print(newy)
 
     if plot:
         plot_data(data_new, show=True, title="New data (energy errors added)")
@@ -280,22 +353,35 @@ def process_scattering_data(profile, data, plot=False):
         plt.plot(x_vals, y_eval, label='slope')
         plt.legend()
         plt.show()
+
+    angle_y_errors = []
+    for i in range(len(x)):
+        angle_y_errors.append(xerr[i] * slope_function(x[i]))
+    
+    print("Angle Errors: ")
+    print(angle_y_errors)
     
     final_yerrs = []
     final_x_errs = []
     for i in range(len(newyerr)):
         final_x_errs.append(0)
-        final_yerr = math.sqrt(newyerr[i]**2 + (xerr[i] * slope_function(x[i]))**2)
+        final_yerr = math.sqrt(newyerr[i]**2 + (angle_y_errors[i]**2))
         final_yerrs.append(final_yerr)
     
-
+    print("Final y errors: ")
+    print(final_yerrs)
+    
+    '''
     #Normalization
     total = 0
     for i in newy:
         total += i
+    '''
     
-    final_data = [x, (1/total)* np.array(newy), final_x_errs, (1/total)* np.array(final_yerrs)]
+    #final_data = [x, (1/total)* np.array(newy), final_x_errs, (1/total)* np.array(final_yerrs)]
+    final_data = [x,np.array(newy), final_x_errs, np.array(final_yerrs)]
     if plot:
+
         plot_data(final_data, show=True, title="Processed Data (All errors propogated)")
 
     return final_data
@@ -475,7 +561,7 @@ def get_convolutions1(profile_sets, choice = 'rutherford', min_angle = 10, plot=
             else:
                 raise Exception('not a valid choice')
         '''
-        plt.plot(pdomain, eval, label = choice + " scattering expectation", color = "red")
+        plt.plot(pdomain, eval, label = choice + " scattering expectation", color = "black", linestyle='dashed')
         plt.ylabel('(Unnormalized) Scattering Cross Section')
         plt.xlabel('Angle (degrees)')
         plt.legend()
@@ -519,7 +605,7 @@ def scattering_model(x, a = 1e-5):
         return y
 
 def plum_model(x):
-    return (1/math.sqrt(math.pi)) * np.exp(-(np.power(x,2)))
+    return (2/math.sqrt(math.pi)) * np.exp(-(np.power(x,2)))
 
 
 def plot_models(data, rutherford_conv, plum_conv, domain_r = None, domain_p = None):
@@ -708,8 +794,8 @@ def plot_fit(result, model, data, show=True, label=None, initial=False, residual
         if residuals:
             residuals = []
             for i in range(len(y)):
-                residuals.append(y[i] - model(x[i], params['a'].value))
-            plt.errorbar(x, residuals, yerr, fmt='o')
+                residuals.append((y[i] - model(x[i], params['a'].value))/yerr[i])
+            plt.errorbar(x, residuals, np.array(yerr)/np.array(yerr), fmt='o')
             plt.hlines(0, 18, 50, colors='red', linestyles='dashed')
             plt.xlabel('Angle (degrees)')
             plt.ylabel('Residuals (CPS * Energy^2)')
@@ -822,9 +908,9 @@ def compare_chi2(data, rutherford_convolutions, plum_convolutions, rutherford_do
     '''
 
     rutherford_chi = fits_chi2(data, rutherford_convolutions, choice = 'rutherford', plot=False, domains=rutherford_domains)
-    plum_chi = fits_chi2(data, plum_convolutions, choice = 'plum pudding', plot=False, domains=plum_domains)
+    #plum_chi = fits_chi2(data, plum_convolutions, choice = 'plum pudding', plot=False, domains=plum_domains)
 
-    print(plum_chi[0])
+    #print(plum_chi[0])
 
     plt.hist(rutherford_chi, label='rutherford convolutions')
     #plt.hist(plum_chi, label = 'plum convolutions')

@@ -76,15 +76,21 @@ for file_name in files:
 print(cutoffs)
     
 
-def plot_profile_data(x = angles, y = cpss, yerr = errors, xerr = 0.5, emoji=':O', show=False):
+def plot_profile_data(x = angles, y = cpss, yerr = errors, xerr = 0.5, emoji=':O', show=False, magnify_yerrs = 1):
     '''
     Plots the profile data.Can be used for any toy data set as well.
     Default is to plot the actual beam profile data
     '''
+    if magnify_yerrs != 1:
+        for i in range(len(yerr)):
+            yerr[i] = yerr[i] * magnify_yerrs
+    
+        plt.text(-10, 100, s="Errors in CPS displayed \n" + str(magnify_yerrs) + " times larger than \ntrue errors")
+
     plt.errorbar(x, y, yerr = yerr, xerr = xerr, marker='o', ls='none')
     plt.xlabel('angle')
     plt.ylabel('CPS')
-    plt.title('beam profile ' + emoji)
+    #plt.title('beam profile ' + emoji)
     plt.xticks(range(-10,11, 2))
     if show:
         plt.show()
