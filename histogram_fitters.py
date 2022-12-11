@@ -223,7 +223,7 @@ def crystal_ball_params(x, y):
     xbar = x[np.argmax(y)]
     n = 2
     α = 1.5
-    above_half = y > max(y)/2
+    above_half = y > max(y)/3
     xmin = min(x[above_half])
     xmax = max(x[above_half])
     σ = (xmax - xmin) / 2 / np.sqrt(2 * np.log(2)) # sigma from hwhm
@@ -321,6 +321,8 @@ def optimal_energy_fit(histogram, plot = False):
                     minresult = result
                     minchi = result.redchi
     sys = 0
+    #print ([result.params['xbar'].value for result in results.values()])
+    #print (minresult)
     for key, result in results.items():
         #print (result.redchi)
         #print (result.params['xbar'].stderr)
@@ -377,7 +379,7 @@ def fitting_moyals(plot = False, do_quadratic = False):
     from scattering_helpers import plotting_unpack
     ly, lyerr = plotting_unpack(locs)
     sy, syerr = plotting_unpack(scales)
-    from energy_loss_2 import get_energies, get_thickness
+    from depreciated.energy_loss_2 import get_energies, get_thickness
     thicknesses = get_thickness(get_energies(data))
     thicknii = []
     for foil in foils:

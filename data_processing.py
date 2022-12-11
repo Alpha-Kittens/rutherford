@@ -11,6 +11,7 @@ def weighted_average(stuff):
     try:
         vals = [result.val for result in stuff]
         weights = 1/np.array([result.tot for result in stuff]) ** 2
+        #print (vals, weights)
         #print (vals)
         #print (weights)
         return np.dot(vals, weights) / np.sum(weights), 1/np.sqrt(np.sum(weights))

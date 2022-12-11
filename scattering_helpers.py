@@ -5,7 +5,7 @@ from models import *
 import matplotlib.pyplot as plt
 import numpy as np
 import math
-from energy_loss import element_map
+from depreciated.energy_loss import element_map
 from beam_profile_models import beam_profile_fit
 #from profile import profile as beam_profile
 from plots import plot_histogram, rebin_hist
@@ -302,7 +302,7 @@ def process_scattering_data(profile, data, plot=False):
     xerr = data[2]
     yerr = data[3]
 
-    from energy_loss_2 import expected_E_square
+    from depreciated.energy_loss_2 import expected_E_square
 
     # Energy Uncertainties
     

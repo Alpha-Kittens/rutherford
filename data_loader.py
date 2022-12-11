@@ -45,7 +45,7 @@ def get_file_info(fp):
     return time, counts
 
 
-def read_data(file):
+def read_data(file, metadata = None):
     """
     Given a file path poitning to a .Spe file, returns a dictionary `data` with relevant informaiton.
     Keys:
@@ -57,7 +57,7 @@ def read_data(file):
         * `cps`: counts per second
     """
     data = {}
-    metadata = get_metadata(file)
+    metadata = get_metadata(file) if not metadata else metadata
     if metadata is None:
         return None
     data['target'], data['angle'], data['iteration'] = metadata
@@ -67,7 +67,7 @@ def read_data(file):
 
     return data
 
-def add_data(data, file):
+def add_data(data, file, metadata = None):
     """
     Adds data associated with a file to a dictionary.
     Arguments:
@@ -78,7 +78,7 @@ def add_data(data, file):
             -Key: metadata of `file`. i.e., foil, angle, iteration. 
             -Value: `time`, `histogram` in file. 
     """
-    entry = read_data(file)
+    entry = read_data(file, metadata = metadata)
     key = (entry['target'], entry['angle'], entry['iteration'])
     if key in data.keys():
         key = (entry['target'], entry['angle'], entry['iteration'] + 1)
@@ -116,13 +116,22 @@ def recursive_read(data, folder, require = [], reject = [], condition = lambda x
         path = str(folder) + "/" + str(entry)
         if not os.path.isdir(path):
             if "unknown" not in entry and "sus" not in entry: 
-                metadata = get_metadata(entry)
+                #print(path)
+                metadata = get_metadata(entry)                    
                 #print (metadata)
                 if metadata is not None and multiple_in(require, metadata[0:-1]) and (reject == [] or not any_in(reject, metadata[0:-1])) and condition(metadata):
-                    add_data(data, path)
+                    if metadata in data.keys():
+                    
+                        i = metadata[2]
+                        while (metadata[0], metadata[1], i) in data.keys():
+                            i += 1
+                        print ("Warning: multiple files with the same metadata were found. Newer entry will be added with an increased iteration.\nMetadata: "+str(metadata)+" -> "+str((metadata[0], metadata[1], i)))
+                        metadata = (metadata[0], metadata[1], i)
+                    add_data(data, path, metadata = metadata)
         else:
             #print (entry)
             #print (folder)
+            #if "Calibration" not in path:
             recursive_read(data, path, require = require, reject = reject, condition = condition) # for some reason, os.path.join isn't doing what I expect
 
 import numpy as np
@@ -135,8 +144,10 @@ def iterationless(data):
     keys = list(data.keys())[:]
     new_data = {}
     for (foil, angle, iter) in keys:
-        if (foil, angle) not in data.keys():
+        if (foil, angle) not in new_data.keys():
             new_data[(foil, angle)] = []
+        #else:
+            #print ("added new one")
         new_data[(foil, angle)].append(tuple(data[(foil, angle, iter)]))
     return new_data
         #print (data[(foil, angle)])

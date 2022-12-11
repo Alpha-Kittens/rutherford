@@ -2,7 +2,8 @@ from energy_loss_3 import *
 from plots import plot_histogram
 from histogram_fitters import *
 print ("beginning testing")
-data = energy_data()
+#data = energy_data()
+data = gold_data_2()
 chx = [0.00000000e+00, 6.66666667e-05, 1.33333333e-04, 2.00000000e-04,
  2.66666667e-04, 3.33333333e-04, 4.00000000e-04, 4.66666667e-04,
  5.33333333e-04, 6.00000000e-04]
@@ -25,7 +26,7 @@ chmu = [1490.9660074063431, 1476.1040211271918, 1461.1481752054317, 1446.0986589
 #thiccness_dx('gold', energies['empty'].val, energies[('gold')].val)
 #thiccness_dx('2gold', energies['empty'].val, energies[('2gold')].val)
 #thiccness_dx('4gold', energies['empty'].val, energies[('4gold')].val, 0.34490747, 0.16126968)
-metadata = ('4gold', 0, 1)
+metadata = ('3gold', 0, 1)
 #plot_histogram(metadata, data[metadata][1])
 #histogram = data[metadata][1]
 #result = fit_histogram(histogram, const = True, soft = True, plot = False)
